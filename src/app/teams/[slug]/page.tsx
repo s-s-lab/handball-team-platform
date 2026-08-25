@@ -62,7 +62,7 @@ export default async function PublicTeamPage({ params }: PublicTeamPageProps) {
             公開設定された試合のLIVEスコア、今後の予定、最近の結果を確認できます。
           </p>
         </div>
-        <PublicMatchList matches={matches} nowMs={Date.now()} />
+        <PublicMatchList matches={matches} />
       </section>
 
       <section className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-14">
