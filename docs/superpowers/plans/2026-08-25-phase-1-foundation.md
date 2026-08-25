@@ -1,6 +1,6 @@
 # Phase 1 Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Establish a tested, secure Next.js/Supabase foundation with authentication, application shell, CI gates, and Vercel-ready configuration.
 
@@ -23,83 +23,44 @@
 
 ### Task 1: Repository and CI baseline
 
-**Files:**
-- Create: `package.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `components.json`, `.gitignore`, `.env.example`
-- Create: `.github/workflows/ci.yml`
-
-**Interfaces:**
-- Produces npm scripts `test`, `typecheck`, `lint`, and `build` used by every later task and CI.
-
-- [ ] Add package/config files for Next.js App Router, Tailwind 4, shadcn/ui, Supabase, Vitest and ESLint.
-- [ ] Add CI that installs dependencies and runs all four quality gates with safe dummy public Supabase values for build-time evaluation.
-- [ ] Commit configuration with tests before production behavior.
+- [x] Add package/config files for Next.js App Router, Tailwind 4, shadcn/ui, Supabase, Vitest and ESLint.
+- [x] Add CI that installs dependencies and runs all four quality gates with safe dummy public Supabase values for build-time evaluation.
+- [x] Commit configuration and executable specifications before the production helpers.
 
 ### Task 2: Test-first foundation helpers
 
-**Files:**
-- Create: `src/lib/env.test.ts`
-- Create: `src/features/auth/credentials.test.ts`
-- Create: `src/lib/auth/routes.test.ts`
-
-**Interfaces:**
-- Consumes future `getPublicEnv`, `parseCredentials`, `isProtectedPath`, `isAuthPath`, `safeNextPath`.
-- Produces executable specifications for environment safety, credential validation, and redirect/path behavior.
-
-- [ ] Write tests for missing/valid Supabase public configuration.
-- [ ] Write tests for normalized email, password minimum length, and invalid form values.
-- [ ] Write tests proving `/app` is protected while portal/team/live routes remain public, plus safe internal redirect behavior.
-- [ ] Push and verify CI fails because the production helpers do not yet exist.
+- [x] Write tests for missing/valid Supabase public configuration.
+- [x] Write tests for normalized email, password minimum length, and invalid form values.
+- [x] Write tests proving `/app` is protected while portal/team/live routes remain public, plus safe internal redirect behavior.
+- [ ] Observe the initial RED CI run before implementing helpers. The tests were committed first, but the new workflow did not execute until a workflow definition existed on the default branch; therefore a missing-module RED run was not captured in CI history.
 
 ### Task 3: Implement helpers and Supabase SSR integration
 
-**Files:**
-- Create: `src/lib/env.ts`
-- Create: `src/features/auth/credentials.ts`
-- Create: `src/lib/auth/routes.ts`
-- Create: `src/lib/supabase/client.ts`, `src/lib/supabase/server.ts`, `src/lib/supabase/proxy.ts`
-- Create: `proxy.ts`
-
-**Interfaces:**
-- `getPublicEnv(env?): { supabaseUrl: string; supabasePublishableKey: string }`
-- `parseCredentials(formData): { ok: true; value: { email: string; password: string } } | { ok: false; message: string }`
-- `isProtectedPath(pathname): boolean`
-- `isAuthPath(pathname): boolean`
-- `safeNextPath(value, fallback?): string`
-
-- [ ] Implement only the behavior required by the failing tests.
-- [ ] Use current Supabase SSR cookie APIs and `getClaims()` in proxy protection.
-- [ ] Run tests until green.
+- [x] Implement the behavior required by the foundation tests.
+- [x] Use current Supabase SSR cookie APIs and `getClaims()` in proxy protection.
+- [x] Run the unit tests to GREEN (11 passing tests).
+- [x] Review redirect/session handling and preserve Supabase cookie security attributes.
 
 ### Task 4: Authentication experience and application shell
 
-**Files:**
-- Create: `src/app/layout.tsx`, `src/app/globals.css`, `src/app/page.tsx`
-- Create: `src/app/login/page.tsx`, `src/app/signup/page.tsx`
-- Create: `src/app/auth/actions.ts`, `src/app/auth/confirm/route.ts`, `src/app/auth/signout/route.ts`, `src/app/auth/check-email/page.tsx`, `src/app/auth/error/page.tsx`
-- Create: `src/app/app/layout.tsx`, `src/app/app/page.tsx`
-- Create: `src/components/ui/*`, `src/components/site/*`, `src/lib/utils.ts`
-
-**Interfaces:**
-- Login/sign-up forms submit to server actions.
-- Successful sign-in redirects to `/app`; sign-up routes to email confirmation state.
-- Authenticated shell can be reused by Phase 2 team-switching navigation.
-
-- [ ] Build semantic, responsive public and authenticated shells using reusable shadcn-style primitives.
-- [ ] Connect server actions to Supabase password authentication.
-- [ ] Add confirmation and sign-out routes.
-- [ ] Keep visible product scope to Phase 1; no fake match/team data.
+- [x] Build semantic, responsive public and authenticated shells using reusable shadcn-style primitives.
+- [x] Connect server actions to Supabase password authentication APIs.
+- [x] Add confirmation and sign-out routes.
+- [x] Keep visible product scope to Phase 1; no fake match/team data.
+- [x] Validate redirect inputs at the Server Action boundary.
 
 ### Task 5: Quality gates and integration handoff
 
-**Files:**
-- Modify only files required to correct test/type/lint/build failures.
-- Generate and commit `package-lock.json` from the CI-resolved dependency graph.
+- [x] Run GitHub Actions and resolve code/configuration failures.
+- [x] Confirm unit tests, TypeScript, ESLint and production build pass.
+- [x] Generate and commit the CI-resolved `package-lock.json`.
+- [x] Return CI to read-only permissions with npm cache + `npm ci`.
+- [x] Create draft pull request #1 to `main`.
+- [ ] Create/link the dedicated Supabase project, configure real public environment values, and verify sign-up/sign-in/sign-out end to end.
+- [ ] Configure Supabase Auth confirmation URLs/template for the deployed environment.
+- [ ] Link the GitHub repository to a new Vercel project and verify a Preview deployment.
+- [ ] Verify public/auth screens at desktop and mobile widths on the Preview deployment.
 
-**Interfaces:**
-- Produces a mergeable `phase-1-foundation` branch and PR.
+## Current handoff
 
-- [ ] Run GitHub Actions and resolve all failures.
-- [ ] Confirm unit tests, TypeScript, ESLint and production build pass.
-- [ ] Create a pull request to `main`.
-- [ ] After Supabase project creation, configure real public env values and verify sign-up/sign-in/sign-out.
-- [ ] After Vercel project linkage, verify Preview deployment on the PR at desktop and mobile widths.
+The repository-side Phase 1 foundation is ready for external-environment integration. Supabase project creation is intentionally blocked until the target Supabase organization is explicitly confirmed. Vercel project creation/import is not exposed by the connected Vercel tool, so the repository must be imported into Vercel before Preview verification can be completed.
