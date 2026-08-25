@@ -1,4 +1,8 @@
-type PublicEnvSource = Partial<Record<"NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", string | undefined>>;
+type PublicEnvSource = {
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?: string;
+  [key: string]: string | undefined;
+};
 
 export type PublicEnv = {
   supabaseUrl: string;
