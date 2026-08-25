@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -23,6 +23,17 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Persist resolved lockfile once
+        if: github.event_name == 'push' && github.ref == 'refs/heads/phase-1-foundation'
+        run: |
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: lock phase 1 dependencies"
+          git push origin HEAD:phase-1-foundation
       - name: Unit tests
         run: npm test
       - name: TypeScript
@@ -31,10 +42,3 @@ jobs:
         run: npm run lint
       - name: Production build
         run: npm run build
-      - name: Upload resolved lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-lock
-          path: package-lock.json
-          if-no-files-found: warn
