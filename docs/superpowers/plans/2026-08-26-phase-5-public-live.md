@@ -1,6 +1,6 @@
 # Phase 5 Public LIVE + Realtime Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Let anyone view explicitly public matches at `/live/[matchId]` and receive authoritative score/timer updates from MATCH CONSOLE through public Realtime Broadcast invalidations.
 
@@ -17,221 +17,113 @@
 - `match_events`, scorer ids, internal roster names and match memo remain private.
 - No service-role key in application code.
 - Realtime Broadcast carries only invalidation metadata; authoritative data is refetched through public RLS/RPC.
-- Public pages must behave identically for logged-in and logged-out visitors by using a sessionless publishable-key client.
+- Public pages behave identically for logged-in and logged-out visitors by using a sessionless publishable-key client.
 - Full public portal/search, PWA/offline and final UI redesign are out of scope.
 
 ---
 
-### Task 1: Anonymous public client and public LIVE pure helpers
+## Task 1: Anonymous public client and public LIVE pure helpers — COMPLETE
+
+- [x] RED tests added for timer/runtime and public match ordering.
+- [x] RED was observed before `runtime.ts` existed.
+- [x] Public LIVE domain types and pure runtime helpers implemented.
+- [x] Sessionless `createPublicClient()` implemented with no persisted/session-detected auth.
+- [x] Vitest path-resolution issue fixed with a narrow relative import rather than broad test configuration changes.
+- [x] Unit tests, TypeScript, ESLint and Production build passed after the fix.
+
+Key files:
+- `src/lib/supabase/public-client.ts`
+- `src/features/public-live/types.ts`
+- `src/features/public-live/runtime.ts`
+- `src/features/public-live/runtime.test.ts`
+
+## Task 2: Public LIVE database boundary and Broadcast trigger — COMPLETE
+
+- [x] Migration committed before application: `supabase/migrations/20260826100000_public_live.sql`.
+- [x] `anon` receives SELECT only on explicitly safe columns.
+- [x] `matches.memo` is not granted to `anon`.
+- [x] `match_events` has no anonymous privilege.
+- [x] Public SELECT policies require both public match and public team.
+- [x] `get_public_live_match(uuid)` is `SECURITY INVOKER`.
+- [x] `get_public_team_matches(uuid)` is `SECURITY INVOKER`.
+- [x] Private fixed-search-path Broadcast trigger implemented for `match:<uuid>:live` / `state_changed`.
+- [x] Migration applied exactly through Supabase migration tooling.
+- [x] Policies, grants, function security modes and trigger metadata verified by SQL.
+- [x] Security Advisor checked; no new Phase 5 warning.
+
+## Task 3: Anonymous database E2E and Broadcast proof — COMPLETE EXCEPT AUTOMATED WEBSOCKET OBSERVATION
+
+- [x] Temporary deterministic fixture created and cleaned up.
+- [x] Private team + public match is hidden from anonymous public RPC.
+- [x] Public team + private match is hidden from anonymous public RPC.
+- [x] Public team + public match returns only sanitized expected keys.
+- [x] Anonymous direct read of `matches.memo` denied with SQLSTATE `42501`.
+- [x] Anonymous read of `match_events` denied with SQLSTATE `42501`.
+- [x] Private state update produced no public Broadcast row.
+- [ ] Observe one database Broadcast row while a real WebSocket subscriber is connected.
+- [x] All fixture rows deleted and explicitly verified at zero.
+
+**Realtime verification limitation:** The current automation connectors can fetch Vercel-rendered HTML but do not execute browser JavaScript/WebSocket sessions. Supabase official troubleshooting documentation confirms that `realtime.messages` daily partitions are created on the first successful WebSocket connection. With no connected subscriber, this project currently has zero Realtime partitions and `realtime.send` drops the no-listener message with the documented warning behavior. We therefore do **not** claim an observed end-to-end WebSocket delivery. The database trigger and browser subscription are implemented, but interactive WebSocket QA remains a deliberate Draft-PR gate.
+
+## Task 4: Public data access and team-match discoverability — COMPLETE
+
+- [x] RED public RPC shaping tests added and observed.
+- [x] Narrow JSON/row shaping rejects malformed public payloads.
+- [x] `getPublicLiveMatch(matchId)` implemented.
+- [x] `getPublicTeamMatches(teamId)` implemented.
+- [x] Existing public team reads migrated to the sessionless public client.
+- [x] Test lint warning fixed without weakening lint rules.
+- [x] Unit tests, TypeScript and ESLint pass.
+
+## Task 5: `/live/[matchId]` Realtime viewer — COMPLETE
+
+- [x] Dynamic public server route added; hidden/nonexistent match -> `notFound()`.
+- [x] Prominent score, clock, period, participants, match status and connection status implemented.
+- [x] Local clock derives from authoritative persisted anchors and server offset.
+- [x] Client subscribes to `match:<matchId>:live` / `state_changed`.
+- [x] Broadcast is treated only as invalidation; the client refetches `get_public_live_match`.
+- [x] Older versions are not adopted over newer local state.
+- [x] Channel is removed on unmount and timer stops when not needed.
+- [x] Vercel build route list confirms `ƒ /live/[matchId]`.
+
+## Task 6: Public team page match section — COMPLETE
+
+- [x] Public roster and match summaries are fetched in parallel.
+- [x] Public match list links to `/live/[matchId]`.
+- [x] LIVE matches render first, then upcoming, then recent finished/cancelled results.
+- [x] Final scores display for finished matches; scheduled rows show date/time/venue.
+- [x] UI intentionally remains functional/temporary; final visual redesign was not started.
+- [x] React 19 purity lint issue from render-time `Date.now()` was fixed without disabling the rule.
+- [x] Unit tests, TypeScript, ESLint and Production build pass.
+
+## Task 7: Live runtime verification and stacked Draft PR — COMPLETE WITH WEBSOCKET GATE NOTED ABOVE
+
+- [x] Full GitHub CI GREEN: Unit tests, TypeScript, ESLint and Production build.
+- [x] 80 unit tests passing.
+- [x] Supabase Security Advisor has no new Phase 5 finding; only the pre-existing leaked-password-protection warning remains.
+- [x] Latest Vercel Preview is READY and `/live/[matchId]` is present in route output.
+- [x] Temporary public fixture returned HTTP 200 from the Preview with expected match labels and 0-0 initial score.
+- [x] Rendered SSR/RSC payload contained sanitized public state and did not contain the private memo.
+- [x] Authoritative MATCH CONSOLE RPC verified `scheduled -> live` at version 1 and HOME goal `0-0 -> 1-0` at version 2.
+- [x] Anonymous public RPC returned the same authoritative `version 2 / live / 1-0` state.
+- [x] Temporary fixture and memberships deleted; all deterministic fixture IDs verified at zero.
+- [x] Draft PR created targeting `phase-4-match-console`.
+
+## Verification Evidence
+
+- Branch: `phase-5-public-live`
+- Pre-docs verified implementation commit: `0fd54a8b0823d790e3551889846a1580ce67ad3b`
+- GitHub Actions successful run: `32912579487`
+- Unit tests: `80 passed`
+- Vercel Preview deployment: `dpl_5qUmfZqQWkaZf8aVKTGkQLxHZPZD` — `READY`
+- Vercel dynamic route: `/live/[matchId]`
+- Preview fixture fetch: HTTP `200`, `x-matched-path: /live/[matchId]`, no-store response
+- DB mutation proof: START -> version 1/LIVE; HOME goal -> version 2/1-0
+- Anonymous public RPC proof: version 2/LIVE/1-0
+- Security Advisor: no Phase 5 finding; existing `auth_leaked_password_protection` warning only
+- Fixture cleanup: organizations/teams/matches/rules/state/events/memberships all `0` for fixture IDs
+- Draft PR: `#5 Phase 5: public live realtime`, base `phase-4-match-console`
 
-**Files:**
-- Create: `src/lib/supabase/public-client.ts`
-- Create: `src/features/public-live/types.ts`
-- Create: `src/features/public-live/runtime.ts`
-- Test: `src/features/public-live/runtime.test.ts`
+## Remaining Draft-PR Gate
 
-**Interfaces:**
-- `createPublicClient()` returns a Supabase client using only `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, with no persisted/session-detected auth.
-- `effectivePublicElapsedMs(snapshot: PublicLiveSnapshot, clientNowMs: number): number`
-- `publicPeriodDurationMs(live: PublicLiveMatch): number`
-- `formatPublicClock(elapsedMs: number): string`
-- `sortPublicMatchSummaries(matches: PublicMatchSummary[], nowMs: number): PublicMatchSummary[]`
-
-- [ ] **Step 1: Write RED tests** in `runtime.test.ts` covering stopped/running clock, period clamp, overtime duration, `18:42` formatting, and order `live -> future scheduled -> finished`.
-
-```ts
-expect(formatPublicClock(18 * 60_000 + 42_000)).toBe("18:42");
-expect(sortPublicMatchSummaries(input, now).map((m) => m.status)).toEqual([
-  "live",
-  "scheduled",
-  "finished",
-]);
-```
-
-- [ ] **Step 2: Run the targeted test in CI** and verify RED because `runtime.ts` does not exist.
-
-- [ ] **Step 3: Implement domain types and minimal pure helpers.** Timer calculation must use `serverNow`/`clockStartedAt`, never increment persisted elapsed in the browser, and clamp to the current period duration.
-
-```ts
-const runningDelta = snapshot.clockRunning && snapshot.clockStartedAt
-  ? Math.max(0, clientNowMs - Date.parse(snapshot.clockStartedAt) - snapshot.serverOffsetMs)
-  : 0;
-return Math.min(periodDurationMs, snapshot.clockElapsedMs + runningDelta);
-```
-
-- [ ] **Step 4: Implement the sessionless public Supabase client** with `persistSession:false`, `autoRefreshToken:false`, and `detectSessionInUrl:false`.
-
-- [ ] **Step 5: Run targeted tests + typecheck + lint and require GREEN.**
-
-### Task 2: Public LIVE database boundary and Broadcast trigger
-
-**Files:**
-- Create: `supabase/migrations/20260826100000_public_live.sql`
-
-**Interfaces:**
-- Adds anon SELECT policies/column grants to safe fields on `matches`, `match_rules`, `match_state`.
-- Adds `get_public_live_match(uuid) -> jsonb` as `SECURITY INVOKER`.
-- Adds `get_public_team_matches(uuid)` as `SECURITY INVOKER`.
-- Adds private trigger function `private.broadcast_public_match_state()`.
-- Broadcast topic: `match:<uuid>:live`; event: `state_changed`; payload only `{match_id, version}`.
-
-- [ ] **Step 1: Commit migration SQL before applying it.** The public match policy must require both flags:
-
-```sql
-create policy matches_select_public_live
-on public.matches for select
-to anon
-using (
-  is_public = true
-  and exists (
-    select 1 from public.teams t
-    where t.id = matches.team_id
-      and t.is_public = true
-  )
-);
-```
-
-- [ ] **Step 2: Grant only safe columns to `anon`.** Do not grant `matches.memo`; do not grant any access to `match_events`.
-
-```sql
-grant select (id, team_id, name, opponent_name, team_side, scheduled_at, venue, status)
-on public.matches to anon;
-```
-
-- [ ] **Step 3: Add equivalent public-select policies for `match_rules` and `match_state`** that resolve visibility through the parent match/team.
-
-- [ ] **Step 4: Implement `get_public_live_match`** as an invoker function joining only granted safe columns and returning `server_now` plus rules/state.
-
-- [ ] **Step 5: Implement `get_public_team_matches`** returning safe summary rows with current HOME/AWAY score and no private roster/event fields.
-
-- [ ] **Step 6: Add the private fixed-search-path Broadcast trigger.** It must check current visibility before calling:
-
-```sql
-perform realtime.send(
-  jsonb_build_object('match_id', new.match_id, 'version', new.version),
-  'state_changed',
-  'match:' || new.match_id::text || ':live',
-  false
-);
-```
-
-- [ ] **Step 7: Apply exactly the committed migration** through Supabase migration tooling.
-
-- [ ] **Step 8: Verify policies, grants, function security mode and trigger metadata with SQL.**
-
-- [ ] **Step 9: Run Supabase Security Advisor** and fix only new Phase 5 findings through an additive migration.
-
-### Task 3: Anonymous database E2E and Broadcast proof
-
-**Files:**
-- No production file unless Task 2 needs a corrective migration.
-
-- [ ] **Step 1: Create a temporary fixture** with one user-owned organization/team, a match/rules/state row, and use explicit ids so cleanup is deterministic.
-
-- [ ] **Step 2: Under `anon`, prove private team + public match returns no row** from `get_public_live_match`.
-
-- [ ] **Step 3: Under `anon`, prove public team + private match returns no row.**
-
-- [ ] **Step 4: Set both public and prove the RPC returns only the expected sanitized keys.** Assert no `memo`, no user/member ids, and no event content.
-
-- [ ] **Step 5: Attempt anonymous direct read of `matches.memo` and require permission denial.**
-
-- [ ] **Step 6: Attempt anonymous read of `match_events` and require permission denial.**
-
-- [ ] **Step 7: Update private match state and verify no new `realtime.messages` row for `match:<id>:live`.**
-
-- [ ] **Step 8: Update public match state and verify one new Broadcast message whose payload contains only `match_id` and `version` and whose event is `state_changed`.**
-
-- [ ] **Step 9: Delete fixture rows and verify zero test rows remain.**
-
-### Task 4: Public data access and team-match discoverability
-
-**Files:**
-- Create: `src/features/public-live/data.ts`
-- Modify: `src/features/team-core/public-data.ts`
-- Test: `src/features/public-live/data-shaping.test.ts`
-- Create: `src/features/public-live/data-shaping.ts`
-
-**Interfaces:**
-- `getPublicLiveMatch(matchId: string): Promise<PublicLiveMatch | null>`
-- `getPublicTeamMatches(teamId: string): Promise<PublicMatchSummary[]>`
-- Existing `getPublicTeamBySlug` and `getPublicTeamMembers` use `createPublicClient()` instead of the cookie/session server client.
-
-- [ ] **Step 1: Write RED shaping tests** for valid RPC JSON, missing state, malformed numeric fields and summary ordering inputs.
-
-- [ ] **Step 2: Observe RED, then implement narrow row/JSON shaping** that returns `null` rather than trusting malformed public RPC payloads.
-
-- [ ] **Step 3: Implement server-only public data functions** using `createPublicClient()` and the two new RPCs.
-
-- [ ] **Step 4: Migrate existing public team data reads to the same sessionless client** so logged-in outsiders and logged-out visitors follow one public RLS path.
-
-- [ ] **Step 5: Run tests/typecheck/lint.**
-
-### Task 5: `/live/[matchId]` Realtime viewer
-
-**Files:**
-- Create: `src/app/live/[matchId]/page.tsx`
-- Create: `src/components/public-live/public-live-viewer.tsx`
-
-**Interfaces:**
-- Server page gets the initial `PublicLiveMatch`; private/nonexistent -> `notFound()`.
-- Client component subscribes to `match:<matchId>:live` / `state_changed` and refetches the public RPC through `createPublicClient()`.
-
-- [ ] **Step 1: Build the server route** with metadata, no auth requirement, and 404 for hidden matches.
-
-- [ ] **Step 2: Build the client viewer** with prominent score, clock, current period, team/opponent names, scheduled/final status and connection indicator.
-
-- [ ] **Step 3: Implement local timer tick** from the authoritative anchors. No mutation RPCs are imported into this component.
-
-- [ ] **Step 4: Subscribe to Broadcast and refetch on invalidation.**
-
-```ts
-const channel = supabase
-  .channel(`match:${match.matchId}:live`)
-  .on("broadcast", { event: "state_changed" }, async () => {
-    const refreshed = await fetchPublicLiveMatchInBrowser(match.matchId);
-    if (refreshed) setMatch(refreshed);
-  })
-  .subscribe(setConnectionState);
-```
-
-- [ ] **Step 5: Remove channel on unmount** and stop/reduce live ticking once status is `finished`.
-
-- [ ] **Step 6: Run typecheck/lint/build** and verify build route list contains `/live/[matchId]`.
-
-### Task 6: Public team page match section
-
-**Files:**
-- Modify: `src/app/teams/[slug]/page.tsx`
-- Create: `src/components/public-live/public-match-list.tsx`
-
-**Interfaces:**
-- Public team page fetches `getPublicTeamMatches(team.id)` alongside roster data.
-- Match rows link to `/live/[matchId]`.
-
-- [ ] **Step 1: Fetch public summaries and group/order them using Task 1 helper.**
-
-- [ ] **Step 2: Render LIVE first, then upcoming, then recent finished matches.** Finished rows display final score; scheduled rows show date/time; live rows show LIVE score.
-
-- [ ] **Step 3: Keep the UI intentionally functional/temporary**; do not start the final visual redesign in this phase.
-
-- [ ] **Step 4: Run typecheck/lint/build.**
-
-### Task 7: Live runtime verification and stacked Draft PR
-
-**Files:**
-- Modify: `docs/superpowers/plans/2026-08-26-phase-5-public-live.md`
-
-- [ ] **Step 1: Run full GitHub CI** and require Unit tests, TypeScript, ESLint and Production build GREEN.
-
-- [ ] **Step 2: Verify Supabase Security Advisor** has no new Phase 5 warning.
-
-- [ ] **Step 3: Create a temporary public fixture** and fetch `/live/<fixture-id>` from the latest Vercel Preview; require HTTP 200 and expected public labels/score in HTML.
-
-- [ ] **Step 4: Flip fixture state through the authoritative Match Console RPC** and verify the public RPC returns the new version/score. Where connector WebSocket inspection is unavailable, record that limitation instead of claiming an observed browser Broadcast delivery.
-
-- [ ] **Step 5: Delete the fixture and verify zero rows remain.**
-
-- [ ] **Step 6: Verify latest Vercel Preview READY** and Route output includes `/live/[matchId]`.
-
-- [ ] **Step 7: Create Draft PR targeting `phase-4-match-console`** and record PR/CI/DB/Vercel evidence here.
+Before promoting PR #5 from Draft to Ready, exercise the public LIVE page in an actual browser WebSocket session and verify one MATCH CONSOLE action updates the open public viewer without reload. This is the only verification intentionally left unclaimed by the automation environment.
