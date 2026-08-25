@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   MatchListItem,
   MatchRecord,
+  MatchRosterCandidate,
   MatchRosterRecord,
+  MatchRosterSelection,
   MatchRulesRecord,
   MatchStatus,
   TeamSide,
@@ -110,5 +112,61 @@ export async function getMatchForCurrentUser(matchId: string): Promise<MatchReco
     isPublic: match.is_public,
     rules: mappedRules,
     roster: mappedRoster,
+  };
+}
+
+export async function listActiveTeamMembersForMatch(
+  matchId: string,
+): Promise<MatchRosterSelection | null> {
+  const supabase = await createClient();
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("id, team_id, name, opponent_name, roster_configured_at")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (matchError) throw databaseReadFailure();
+  if (!match) return null;
+
+  const [{ data: candidates, error: candidatesError }, { data: snapshots, error: snapshotsError }] =
+    await Promise.all([
+      supabase
+        .from("team_members")
+        .select("id, kind, full_name, display_name, shirt_number, primary_position")
+        .eq("team_id", match.team_id)
+        .eq("is_active", true)
+        .order("kind")
+        .order("shirt_number", { nullsFirst: false })
+        .order("full_name"),
+      supabase
+        .from("match_rosters")
+        .select("team_member_id")
+        .eq("match_id", matchId),
+    ]);
+
+  if (candidatesError || snapshotsError) throw databaseReadFailure();
+
+  const mappedCandidates: MatchRosterCandidate[] = (candidates ?? []).map((member) => ({
+    id: member.id,
+    kind: member.kind as "player" | "staff",
+    fullName: member.full_name,
+    displayName: member.display_name,
+    shirtNumber: member.shirt_number,
+    primaryPosition: member.primary_position,
+  }));
+
+  const hasConfiguredRoster = Boolean(match.roster_configured_at);
+  const savedIds = (snapshots ?? [])
+    .map((snapshot) => snapshot.team_member_id)
+    .filter((value): value is string => typeof value === "string");
+
+  return {
+    matchId: match.id,
+    teamId: match.team_id,
+    matchName: match.name,
+    opponentName: match.opponent_name,
+    candidates: mappedCandidates,
+    selectedIds: hasConfiguredRoster ? savedIds : mappedCandidates.map((member) => member.id),
+    hasConfiguredRoster,
   };
 }
