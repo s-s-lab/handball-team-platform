@@ -7,11 +7,14 @@ function redirectWithSession(url: URL, source: NextResponse) {
   const response = NextResponse.redirect(url);
 
   source.cookies.getAll().forEach((cookie) => {
-    response.cookies.set(cookie.name, cookie.value);
+    response.cookies.set(cookie);
   });
 
   source.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== "location") response.headers.set(key, value);
+    const normalizedKey = key.toLowerCase();
+    if (normalizedKey !== "location" && normalizedKey !== "set-cookie") {
+      response.headers.set(key, value);
+    }
   });
 
   return response;
