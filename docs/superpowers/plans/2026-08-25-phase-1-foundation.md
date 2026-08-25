@@ -49,18 +49,19 @@
 - [x] Keep visible product scope to Phase 1; no fake match/team data.
 - [x] Validate redirect inputs at the Server Action boundary.
 
-### Task 5: Quality gates and integration handoff
+### Task 5: Quality gates and external integration
 
 - [x] Run GitHub Actions and resolve code/configuration failures.
 - [x] Confirm unit tests, TypeScript, ESLint and production build pass.
 - [x] Generate and commit the CI-resolved `package-lock.json`.
 - [x] Return CI to read-only permissions with npm cache + `npm ci`.
 - [x] Create draft pull request #1 to `main`.
-- [ ] Create/link the dedicated Supabase project, configure real public environment values, and verify sign-up/sign-in/sign-out end to end.
-- [ ] Configure Supabase Auth confirmation URLs/template for the deployed environment.
-- [ ] Link the GitHub repository to a new Vercel project and verify a Preview deployment.
+- [x] Create the dedicated Supabase project in `ap-northeast-1` and configure Vercel public Supabase environment values for Preview and Production.
+- [x] Configure Supabase Auth Site URL, redirect allow-list, custom SMTP (Resend), and Confirm sign up template for SSR token-hash confirmation.
+- [x] Link the GitHub repository to Vercel and verify a successful Next.js Preview deployment.
+- [ ] Verify sign-up/email confirmation/sign-in/sign-out end to end against the deployed Supabase project.
 - [ ] Verify public/auth screens at desktop and mobile widths on the Preview deployment.
 
 ## Current handoff
 
-The repository-side Phase 1 foundation is ready for external-environment integration. Supabase project creation is intentionally blocked until the target Supabase organization is explicitly confirmed. Vercel project creation/import is not exposed by the connected Vercel tool, so the repository must be imported into Vercel before Preview verification can be completed.
+The external services are provisioned and connected. A new Preview deployment should be used after environment-variable and Auth configuration changes. Phase 1 remains draft until the live authentication flow and responsive Preview UI are verified.
