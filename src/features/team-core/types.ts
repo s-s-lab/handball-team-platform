@@ -29,6 +29,57 @@ export type TeamMemberInput = {
   isPublic: boolean;
 };
 
+export type OrganizationSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  role: MembershipRole;
+};
+
+export type TeamSummary = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  isPublic: boolean;
+  role: MembershipRole;
+};
+
+export type OrganizationDetail = OrganizationSummary & {
+  teams: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    isPublic: boolean;
+  }>;
+};
+
+export type TeamMemberRecord = {
+  id: string;
+  teamId: string;
+  kind: TeamMemberKind;
+  fullName: string;
+  displayName: string | null;
+  shirtNumber: number | null;
+  primaryPosition: HandballPosition | null;
+  gradeOrAge: string | null;
+  imagePath: string | null;
+  isActive: boolean;
+  isPublic: boolean;
+};
+
+export type TeamDetail = {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  shortName: string | null;
+  description: string | null;
+  isPublic: boolean;
+  role: MembershipRole | null;
+  roster: TeamMemberRecord[];
+};
+
 export type ParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; message: string };
