@@ -121,6 +121,27 @@ describe("parseTeamMemberForm", () => {
     });
   });
 
+  it("requires an explicit display name before publishing a member", () => {
+    const result = parseTeamMemberForm(
+      form({
+        teamId: "22222222-2222-4222-8222-222222222222",
+        kind: "player",
+        fullName: "Private Full Name",
+        displayName: "",
+        shirtNumber: "8",
+        primaryPosition: "RB",
+        gradeOrAge: "中学3年",
+        isActive: "on",
+        isPublic: "on",
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      message: "公開する場合は公開表示名を入力してください。",
+    });
+  });
+
   it.each(["-1", "100", "12.5", "abc"])("rejects invalid shirt number %s", (shirtNumber) => {
     expect(
       parseTeamMemberForm(
