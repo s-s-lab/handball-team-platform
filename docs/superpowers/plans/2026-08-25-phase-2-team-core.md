@@ -4,7 +4,7 @@
 
 **Goal:** Let authenticated users create an organization, create teams, manage player/staff roster records, and expose an opt-in sanitized public team profile.
 
-**Architecture:** PostgreSQL + RLS is the authorization boundary. Atomic organization/team bootstrap operations use authenticated security-definer RPCs; normal roster CRUD uses the user's Supabase session under RLS. Next.js Server Components read data, Server Actions validate FormData and mutate data, and public routes call sanitized RPCs only.
+**Architecture:** PostgreSQL + RLS is the authorization boundary. Public bootstrap RPCs execute as invokers and delegate atomic organization/team creation to non-exposed `private` security-definer helpers. Normal roster CRUD uses the user's Supabase session under RLS. Anonymous reads receive only safe column grants and public-row RLS; public RPCs are security-invoker wrappers over those restricted rows/columns. Next.js Server Components read data and Server Actions validate FormData and mutate data without service-role credentials.
 
 **Tech Stack:** Next.js 16.x, React 19.x, TypeScript, Tailwind CSS 4.x, shadcn/ui source components, Supabase PostgreSQL/Auth, Vitest, GitHub Actions, Vercel.
 
@@ -15,8 +15,9 @@
 - GitHub is the single source of truth for migration SQL and application code.
 - No service-role key or secret may be committed or used in browser/server application code.
 - Authorization must use RLS/database membership, never `user_metadata`.
-- Public team/member data is opt-in and sanitized through public RPCs.
+- Public team/member data is opt-in and sanitized through RLS, safe column grants, and public RPCs.
 - `team_members` remains separate from `auth.users` with an optional `linked_user_id`.
+- A public roster member must have an explicit non-empty `display_name`; `full_name` is never an anonymous-readable column.
 - Match-related tables and behavior are out of scope.
 - Every task must end with test/type/lint/build evidence appropriate to that task.
 
@@ -24,118 +25,74 @@
 
 ### Task 1: Team-core validation helpers
 
-**Files:**
-- Create: `src/features/team-core/validation.ts`
-- Create: `src/features/team-core/validation.test.ts`
-- Create: `src/features/team-core/types.ts`
-
-**Interfaces:**
-- Produces `slugify(input: string): string`
-- Produces `parseOrganizationForm(formData: FormData)`
-- Produces `parseTeamForm(formData: FormData)`
-- Produces `parseTeamMemberForm(formData: FormData)`
-- Produces `MEMBER_KINDS` and `HANDBALL_POSITIONS`
-
-- [ ] **Step 1: Write failing tests** for trimming names, slug normalization, invalid slug length/chars, member kind/position validation, optional shirt numbers, and `0..99` limits.
-- [ ] **Step 2: Run `npm test -- src/features/team-core/validation.test.ts`** and verify RED because helpers do not exist.
-- [ ] **Step 3: Implement minimal pure TypeScript parsers** returning `{ ok: true, value } | { ok: false, message }` and never throwing on malformed FormData.
-- [ ] **Step 4: Run the targeted tests** and verify GREEN.
-- [ ] **Step 5: Commit** with `feat: add team core validation`.
+- [x] Write failing tests for name/slug/member validation and observe RED.
+- [x] Implement `slugify`, organization/team/member FormData parsers, enums/types.
+- [x] Add and verify the public-member rule: `isPublic=true` requires an explicit public display name.
+- [x] Verify targeted tests GREEN.
 
 ### Task 2: Database schema, RLS, and public RPCs
 
-**Files:**
-- Create: `supabase/migrations/20260825124000_team_core.sql`
+- [x] Commit migration SQL before applying it.
+- [x] Create `profiles`, `organizations`, `organization_memberships`, `teams`, `team_user_memberships`, and `team_members` plus role/member enums and indexes.
+- [x] Enable RLS on every exposed table and use membership-based authorization.
+- [x] Harden membership helpers into the non-exposed `private` schema.
+- [x] Make organization/team bootstrap atomic without granting direct anonymous/admin bypass access.
+- [x] Restrict anonymous team/member reads to explicitly safe columns and public rows.
+- [x] Add a DB constraint requiring non-empty `display_name` for public roster rows.
+- [x] Remove the former public `full_name` fallback.
+- [x] Apply all migrations through Supabase migration tooling.
+- [x] Run Security Advisor and resolve every warning attributable to Phase 2 migrations.
 
-**Interfaces:**
-- Produces enums `membership_role`, `team_member_kind`, `handball_position`.
-- Produces tables `profiles`, `organizations`, `organization_memberships`, `teams`, `team_user_memberships`, `team_members`.
-- Produces helpers `is_organization_member(uuid)`, `is_organization_admin(uuid)`, `is_team_member(uuid)`, `is_team_admin(uuid)`.
-- Produces RPCs `create_organization_with_admin(text,text)`, `create_team_with_admin(uuid,text,text)`, `get_public_team(text)`, `get_public_team_members(uuid)`.
+Applied migrations:
 
-- [ ] **Step 1: Write the migration SQL in GitHub first** with constraints, indexes, RLS enabled on every table, fixed `search_path` on security-definer functions, explicit grants/revokes, and public RPC result columns limited to safe fields.
-- [ ] **Step 2: Review SQL statically** for recursive RLS, missing `auth.uid()` checks, overly broad `anon` grants, and mutable `search_path`.
-- [ ] **Step 3: Apply the exact committed SQL through Supabase migration tooling** using migration name `team_core`.
-- [ ] **Step 4: Verify with SQL queries** that all six tables exist, `relrowsecurity=true`, required policies/functions exist, and public RPCs expose only their declared columns.
-- [ ] **Step 5: Run Supabase Security Advisor** and resolve any new warnings attributable to this migration.
-- [ ] **Step 6: Commit any migration corrections** as a new migration; never rewrite an already-applied migration.
+- `20260825124000_team_core.sql`
+- `20260825125000_team_core_security_hardening.sql`
+- `20260825130000_team_core_atomic_bootstrap.sql`
+- `20260825131000_public_member_display_name.sql`
+- `20260825132000_public_roster_use_rls.sql`
 
 ### Task 3: Typed team-core data access
 
-**Files:**
-- Create: `src/features/team-core/data.ts`
-- Create: `src/features/team-core/actions.ts`
-- Modify: `src/app/app/page.tsx`
-
-**Interfaces:**
-- `listMyOrganizations()` returns organization id/name/slug/role.
-- `listMyTeams()` returns team id/name/slug/org id/role/public flag.
-- `getOrganizationForCurrentUser(id)` returns organization + role + teams or null.
-- `getTeamForCurrentUser(id)` returns team + role + roster or null.
-- Server Actions: `createOrganization`, `createTeam`, `createTeamMember`, `updateTeamMember`, `updateTeamVisibility`, `updateTeamMemberVisibility`.
-
-- [ ] **Step 1: Add tests for action-safe error mapping** as pure helper cases where practical (duplicate slug, permission, generic database failure).
-- [ ] **Step 2: Implement server-only data functions** using the existing request-scoped Supabase server client and authenticated session; do not create admin/service clients.
-- [ ] **Step 3: Implement Server Actions** that call Task 1 parsers, Task 2 RPCs/CRUD, `revalidatePath`, and safe redirects.
-- [ ] **Step 4: Replace the `/app` placeholder state** with real organization/team cards and a zero-data onboarding CTA.
-- [ ] **Step 5: Run targeted tests, `npm run typecheck`, and `npm run lint`**.
-- [ ] **Step 6: Commit** with `feat: connect team core data layer`.
+- [x] Add action-safe error mapping tests and observe RED before implementation.
+- [x] Implement `listMyOrganizations`, `listMyTeams`, `getOrganizationForCurrentUser`, and `getTeamForCurrentUser` using the existing request-scoped Supabase client.
+- [x] Implement Server Actions for organization/team/member creation and team/member visibility updates.
+- [x] Replace `/app` placeholder content with real organization/team data and zero-data onboarding.
+- [x] Verify tests, TypeScript, ESLint, and production build.
 
 ### Task 4: Organization and team management UI
 
-**Files:**
-- Create: `src/app/app/organizations/new/page.tsx`
-- Create: `src/app/app/organizations/[organizationId]/page.tsx`
-- Create: `src/app/app/organizations/[organizationId]/teams/new/page.tsx`
-- Create: `src/components/team-core/organization-form.tsx`
-- Create: `src/components/team-core/team-form.tsx`
-
-**Interfaces:**
-- Organization form posts to `createOrganization`.
-- Team form posts to `createTeam` with hidden `organizationId`.
-
-- [ ] **Step 1: Build forms with semantic labels, large touch targets, validation hints, and editable slug fields** following existing Card/Field/Input/Button patterns.
-- [ ] **Step 2: Render organization detail from `getOrganizationForCurrentUser`** and use `notFound()` when inaccessible/nonexistent.
-- [ ] **Step 3: Hide Create team controls unless current role is `admin`**; RLS remains the true security boundary.
-- [ ] **Step 4: Run `npm run typecheck`, `npm run lint`, and `npm run build`**.
-- [ ] **Step 5: Commit** with `feat: add organization and team management`.
+- [x] Implement organization creation with editable auto-generated slug.
+- [x] Implement organization detail with role-aware team creation action.
+- [x] Implement team creation under an authorized organization.
+- [x] Keep RLS as the security boundary; UI only hides actions for usability.
+- [x] Verify TypeScript, ESLint, and production build.
 
 ### Task 5: Roster and staff management UI
 
-**Files:**
-- Create: `src/app/app/teams/[teamId]/page.tsx`
-- Create: `src/app/app/teams/[teamId]/members/new/page.tsx`
-- Create: `src/app/app/teams/[teamId]/members/[memberId]/edit/page.tsx`
-- Create: `src/components/team-core/member-form.tsx`
-- Create: `src/components/team-core/roster-list.tsx`
-
-**Interfaces:**
-- `member-form.tsx` accepts optional initial values and an action function.
-- Team detail consumes `getTeamForCurrentUser` and renders roster by kind/status.
-
-- [ ] **Step 1: Render team summary and roster** with shirt number, display/full name, kind, position, grade/age, active/public status.
-- [ ] **Step 2: Add admin-only create/edit controls** while keeping all rows readable to team members.
-- [ ] **Step 3: Implement create/edit forms** including player/staff selector, optional position, shirt number, grade/age, active/public toggles, and copy warning that public data is visible on the internet.
-- [ ] **Step 4: Add team-level public toggle** and member-level public toggle, both defaulting false in the database and UI.
-- [ ] **Step 5: Run targeted tests plus typecheck/lint/build**.
-- [ ] **Step 6: Commit** with `feat: add roster management`.
+- [x] Implement team summary and roster grouped by active/inactive state.
+- [x] Implement admin-only member create/edit controls.
+- [x] Implement player/staff, shirt number, GK/LW/LB/CB/RB/RW/PV, grade/age, active, and public fields.
+- [x] Default member public visibility to false and require a public display name before publishing.
+- [x] Implement team-level and member-level public toggles.
+- [x] Add clear copy that published member data is visible on the internet.
+- [x] Verify tests, TypeScript, ESLint, and production build.
 
 ### Task 6: Public team page and end-to-end verification
 
-**Files:**
-- Create: `src/app/teams/[slug]/page.tsx`
-- Create: `src/features/team-core/public-data.ts`
-- Modify: `docs/superpowers/plans/2026-08-25-phase-2-team-core.md`
+- [x] Implement `getPublicTeamBySlug` and `getPublicTeamMembers` using public RPCs only.
+- [x] Add a pure public-roster shaping test, observe RED, and implement a second-layer empty-display-name filter.
+- [x] Build `/teams/[slug]` with team information and public roster only.
+- [x] Verify latest GitHub Actions quality job: unit tests, TypeScript, ESLint, production build all GREEN.
+- [x] Verify latest Vercel Preview reaches READY.
+- [x] Run authenticated DB/RLS E2E: create organization → create team → add public player → add private staff → publish team → switch to anonymous role. Result: authenticated roster count `2`, admin role `admin`, public team count `1`, public roster count `1`, public name only `E2E Player`. Transaction rolled back with zero residue.
+- [x] Run Vercel runtime E2E with temporary real Supabase rows. `/teams/preview-e2e-team-202608252102` returned HTTP 200 and rendered only `Preview E2E Player` (#7, RB, U18); private staff and internal full names were absent. Temporary rows were deleted and zero residue verified.
+- [x] Re-run Supabase Security Advisor. No Phase 2 migration warning remains; only the project-level `auth_leaked_password_protection` warning remains.
+- [x] Draft PR #2 remains stacked on `phase-1-foundation` until the earlier phase is merged.
 
-**Interfaces:**
-- `getPublicTeamBySlug(slug)` calls `get_public_team`.
-- `getPublicTeamMembers(teamId)` calls `get_public_team_members`.
+## Verification limitation
 
-- [ ] **Step 1: Implement public data functions** using only the sanitized RPCs; do not query private team/member tables from the public route.
-- [ ] **Step 2: Build `/teams/[slug]`** with team name/description and only public roster rows; private/nonexistent teams use `notFound()`.
-- [ ] **Step 3: Run the full local/CI command set**: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
-- [ ] **Step 4: Verify GitHub Actions is green** for the latest commit.
-- [ ] **Step 5: Verify Vercel Preview reaches READY** and core pages render without runtime configuration errors.
-- [ ] **Step 6: Perform live E2E with the authenticated test account**: create organization → create team → add player → add staff → view roster → enable team/member public flags → open public page → confirm private member remains absent.
-- [ ] **Step 7: Re-run Supabase Security Advisor** and record result.
-- [ ] **Step 8: Open a draft Phase 2 pull request** with base `phase-1-foundation` while PR #1 remains unmerged; retarget to `main` after Phase 1 is merged.
+The connector environment cannot reuse the user's already-authenticated browser cookie to click the protected `/app` forms directly. Therefore the authenticated UI click-through itself is not browser-automated here. The underlying Server Action code passes CI/build, the authorization/data path is verified with the real authenticated Supabase role, and the public page is verified against the deployed Vercel Preview with real temporary data. This is a verification-tool limitation, not a known product defect.
+
+## Phase 2 status
+
+Implementation and available automated/integration verification are complete. Phase 2 stays as a draft stacked PR while development proceeds to Match Core.
