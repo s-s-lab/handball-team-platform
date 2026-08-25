@@ -77,14 +77,8 @@ function MatchRow({ match, live = false }: { match: PublicMatchSummary; live?: b
   );
 }
 
-export function PublicMatchList({
-  matches,
-  nowMs,
-}: {
-  matches: PublicMatchSummary[];
-  nowMs: number;
-}) {
-  const ordered = sortPublicMatchSummaries(matches, nowMs);
+export function PublicMatchList({ matches }: { matches: PublicMatchSummary[] }) {
+  const ordered = sortPublicMatchSummaries(matches);
   const live = ordered.filter((match) => match.status === "live");
   const scheduled = ordered.filter((match) => match.status === "scheduled");
   const recent = ordered.filter(
