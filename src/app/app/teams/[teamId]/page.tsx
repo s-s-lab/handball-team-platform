@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, ExternalLink, MapPin, Plus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getTeamForCurrentUser } from "@/features/team-core/data";
 import { updateTeamVisibility } from "@/features/team-core/actions";
+import { listTeamMatches } from "@/features/matches/data";
+import type { MatchStatus } from "@/features/matches/types";
 import { RosterList } from "@/components/team-core/roster-list";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Button } from "@/components/ui/button";
@@ -13,12 +15,33 @@ type TeamPageProps = {
   searchParams: Promise<{ error?: string }>;
 };
 
+const matchStatusLabels: Record<MatchStatus, string> = {
+  scheduled: "予定",
+  live: "試合中",
+  finished: "終了",
+  cancelled: "中止",
+};
+
+function formatJapanDateTime(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export default async function TeamPage({ params, searchParams }: TeamPageProps) {
   const [{ teamId }, query] = await Promise.all([params, searchParams]);
   const team = await getTeamForCurrentUser(teamId);
   if (!team) notFound();
 
   const isAdmin = team.role === "admin";
+  const canManageMatches = team.role !== null;
+  const matches = canManageMatches ? await listTeamMatches(team.id) : [];
 
   return (
     <main className="flex flex-col gap-6">
@@ -39,13 +62,22 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
             ) : null}
           </div>
 
-          {isAdmin ? (
-            <Button asChild size="lg">
-              <Link href={`/app/teams/${team.id}/members/new`}>
-                <Plus aria-hidden="true" /> メンバーを追加
-              </Link>
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {canManageMatches ? (
+              <Button asChild size="lg">
+                <Link href={`/app/teams/${team.id}/matches/new`}>
+                  <CalendarDays aria-hidden="true" /> 試合を作成
+                </Link>
+              </Button>
+            ) : null}
+            {isAdmin ? (
+              <Button asChild size="lg" variant="outline">
+                <Link href={`/app/teams/${team.id}/members/new`}>
+                  <Plus aria-hidden="true" /> メンバーを追加
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -57,6 +89,65 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           {query.error}
         </div>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>試合</CardTitle>
+          <CardDescription>このチームの試合予定と保存済みの試合を確認できます。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {matches.length ? (
+            <div className="flex flex-col gap-2">
+              {matches.map((match) => (
+                <Link
+                  key={match.id}
+                  href={`/app/matches/${match.id}`}
+                  className="group flex min-h-20 items-center justify-between gap-4 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted/60"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="font-bold text-foreground">{match.name}</p>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        {matchStatusLabels[match.status]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                      {match.teamSide === "home" ? "HOME" : "AWAY"} vs {match.opponentName}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays aria-hidden="true" /> {formatJapanDateTime(match.scheduledAt)}
+                      </span>
+                      {match.venue ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <MapPin aria-hidden="true" /> {match.venue}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <ChevronRight aria-hidden="true" className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-border p-5">
+              <div>
+                <p className="font-semibold">まだ試合はありません。</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  試合情報とルールを登録すると、ここからロスター設定へ進めます。
+                </p>
+              </div>
+              {canManageMatches ? (
+                <Button asChild>
+                  <Link href={`/app/teams/${team.id}/matches/new`}>
+                    <CalendarDays aria-hidden="true" /> 最初の試合を作成
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
