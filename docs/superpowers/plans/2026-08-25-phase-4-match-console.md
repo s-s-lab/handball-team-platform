@@ -127,7 +127,7 @@
 - [x] Run full GitHub CI and require Unit tests, TypeScript, ESLint and Production build GREEN.
 - [x] Verify latest Vercel Preview READY and build output includes both `/login` and `/app/matches/[matchId]/console`. Direct `/login` HTTP-200 fetch from this connector remains blocked by Vercel Preview Protection/SSO, so no false 200 claim is recorded.
 - [x] Re-run Supabase Security Advisor and confirm no Phase 4 migration warning. The only current warning is the existing Auth-level `Leaked Password Protection Disabled` setting.
-- [ ] Create Draft PR targeting `phase-3-match-core`.
+- [x] Create Draft PR #4 targeting `phase-3-match-core`.
 - [x] Record migration/E2E/CI/Vercel evidence in this plan.
 
 ## Verification Evidence — 2026-08-26
@@ -135,8 +135,9 @@
 - Supabase migrations present: `match_console_runtime`, `match_console_security_hardening`.
 - Security Advisor: no Match Console/RLS/DDL warning; only existing `auth_leaked_password_protection` warning remains.
 - Authenticated SQL E2E: 15/15 checks passed. Verified initial state v0, START v1, idempotent retry, stale-version SQLSTATE `40001`, STOP with ~5s materialized elapsed time, HOME/AWAY goals, append-only goal revert, period change, FINISH v7, post-finish rejection, and cleanup to zero fixture rows.
-- Latest verified GitHub commit before this evidence update: `3b83faffb6e81d45f0150dfac9fb2239a48e7f3b`.
-- GitHub Actions run `32910674343`: Unit tests, TypeScript, ESLint, and Production build all succeeded.
+- GitHub Actions run `32910674343` for code commit `3b83faffb6e81d45f0150dfac9fb2239a48e7f3b`: Unit tests, TypeScript, ESLint, and Production build all succeeded.
+- Verification-doc commit `682b315787de9667fe123803657a602b63d43fd6`: GitHub Actions run `32910790311` completed successfully.
 - Vercel deployment `dpl_8KYsaCP6nMaMBPPLyCvNoErQtaCk`: READY.
 - Vercel build Route output includes `ƒ /app/matches/[matchId]/console` and `ƒ /login`.
 - A routing gap discovered during final verification was fixed: the console component existed, but the actual `/console` page and match-detail link were missing. Both are now connected and verified in Vercel build output.
+- Draft PR: #4 `Phase 4: authoritative match console runtime`, base `phase-3-match-core`, head `phase-4-match-console`.
