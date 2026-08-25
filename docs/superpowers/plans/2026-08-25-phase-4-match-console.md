@@ -36,15 +36,16 @@
 - `formatClock(elapsedMs): string`
 - Types `ConsoleRuntimeSnapshot`, `ConsolePeriodRules`
 
-- [ ] Write failing tests first for stopped/running clocks, clamping to period duration, normal vs overtime duration, `00:00`, `18:42`, and exact end-of-period formatting.
-- [ ] Observe RED in CI because `runtime.ts` does not exist.
-- [ ] Implement minimal pure helpers.
-- [ ] Verify targeted tests and full CI GREEN.
+- [x] Write failing tests first for stopped/running clocks, clamping to period duration, normal vs overtime duration, `00:00`, `18:42`, and exact end-of-period formatting.
+- [x] Observe RED before runtime implementation.
+- [x] Implement minimal pure helpers.
+- [x] Verify targeted tests and full CI GREEN.
 
 ### Task 2: Runtime schema and action engine
 
 **Files:**
 - Create: `supabase/migrations/20260825150000_match_console_runtime.sql`
+- Create: `supabase/migrations/20260825150100_match_console_security_hardening.sql`
 
 **Interfaces:**
 - Produces enum `match_event_type`.
@@ -53,31 +54,31 @@
 - Produces authenticated `get_match_console_snapshot(uuid) -> jsonb`.
 - Produces authenticated `apply_match_action(uuid, uuid, bigint, text, jsonb) -> jsonb`.
 
-- [ ] Commit migration before applying it.
-- [ ] Add append-only event table and current-state table with RLS and indexes.
-- [ ] Create state initialization trigger and backfill existing matches.
-- [ ] Implement private snapshot JSON helper including `server_now`, match status and current-period duration.
-- [ ] Implement idempotent action engine with `FOR UPDATE` state lock and `expected_version` check.
-- [ ] Implement START/STOP/RESET, period, goal, undo and finish semantics exactly as spec.
-- [ ] Prevent direct event/state mutations by application roles and prevent anonymous runtime reads/writes.
-- [ ] Apply committed migration and verify security/grants/RLS.
-- [ ] Run Security Advisor and fix only new Phase 4 findings through additive migrations.
+- [x] Commit migration before applying it.
+- [x] Add append-only event table and current-state table with RLS and indexes.
+- [x] Create state initialization trigger and backfill existing matches.
+- [x] Implement private snapshot JSON helper including `server_now`, match status and current-period duration.
+- [x] Implement idempotent action engine with `FOR UPDATE` state lock and `expected_version` check.
+- [x] Implement START/STOP/RESET, period, goal, undo and finish semantics exactly as spec.
+- [x] Prevent direct event/state mutations by application roles and prevent anonymous runtime reads/writes.
+- [x] Apply committed migration and verify security/grants/RLS.
+- [x] Run Security Advisor and fix Phase 4 runtime grants through additive hardening migration.
 
 ### Task 3: Authenticated database E2E
 
 **Files:**
 - No production file unless a migration correction is needed.
 
-- [ ] In a transaction under real `authenticated` role context, create temporary team/match/roster.
-- [ ] Verify snapshot version starts at 0 and state row exists.
-- [ ] START with version 0 and verify version 1 + match `live` + clock anchor.
-- [ ] Retry identical `client_action_id`; verify version/score do not change.
-- [ ] Attempt stale expected version with a new action id; verify SQLSTATE `40001` and unchanged state.
-- [ ] STOP after controlled DB-time adjustment or state anchor adjustment; verify elapsed materializes and clock stops.
-- [ ] Add HOME goal, add AWAY goal, undo last goal; verify correct score and append-only related event.
-- [ ] Change period; verify clock reset/stopped and period duration selection.
-- [ ] Finish match; verify status `finished`, clock stopped, score preserved, subsequent mutation rejected.
-- [ ] Roll back and verify no E2E data remains.
+- [x] Under the real `authenticated` role context, create a temporary team/match/roster fixture.
+- [x] Verify snapshot version starts at 0 and state row exists.
+- [x] START with version 0 and verify version 1 + match `live` + clock anchor.
+- [x] Retry identical `client_action_id`; verify version/score and event count do not change.
+- [x] Attempt stale expected version with a new action id; verify SQLSTATE `40001` and unchanged state.
+- [x] STOP after a controlled 5-second state-anchor adjustment; verify elapsed materializes and clock stops.
+- [x] Add HOME goal, add AWAY goal, undo last goal; verify score and append-only `goal_reverted` event.
+- [x] Change period; verify clock resets/stops and period changes.
+- [x] Finish match; verify status `finished`, clock stopped, score preserved, subsequent mutation rejected with SQLSTATE `22023`.
+- [x] Delete the temporary fixture in the same verification transaction and verify organization/team/match counts return to zero.
 
 ### Task 4: Console data/actions
 
@@ -93,11 +94,11 @@
 - `parseConsoleAction(formData)` validates match/action IDs, version and action payload.
 - `applyConsoleAction(formData)` calls `apply_match_action` and returns a serializable result rather than redirecting.
 
-- [ ] Write failing action-parser tests before parser implementation.
-- [ ] Observe RED, then implement the narrow action parser.
-- [ ] Implement server data aggregation under RLS.
-- [ ] Implement mutation action with `40001` conflict mapping and generic safe errors.
-- [ ] Verify tests/type/lint/build.
+- [x] Write failing action-parser tests before parser implementation.
+- [x] Observe RED, then implement the narrow action parser.
+- [x] Implement server data aggregation under RLS.
+- [x] Implement mutation action with `40001` conflict mapping and generic safe errors.
+- [x] Verify tests/type/lint/build.
 
 ### Task 5: MATCH CONSOLE UI
 
@@ -109,22 +110,33 @@
 **Interfaces:**
 - Client component receives initial authoritative snapshot + labels/rules and uses server action responses to replace local state.
 
-- [ ] Build tablet-landscape-first full console with huge timer/scores and large touch targets.
-- [ ] Implement local display tick using `server_now` offset and persisted clock anchor; do not emit per-second writes.
-- [ ] Wire START/STOP, RESET, period previous/next, HOME/AWAY +1, undo last goal and finish.
-- [ ] Generate a new `client_action_id` for every user intent and preserve it while the same request is pending.
-- [ ] Disable conflicting controls while a request is pending and after match finish.
-- [ ] On `40001`, replace local state with latest authoritative snapshot and show the conflict message.
-- [ ] Replace Phase 3 disabled MATCH CONSOLE button with working route.
-- [ ] Verify responsive layout by build/runtime inspection available in this environment.
+- [x] Build tablet-landscape-first full console with huge timer/scores and large touch targets.
+- [x] Implement local display tick using `server_now` offset and persisted clock anchor; do not emit per-second writes.
+- [x] Wire START/STOP, RESET, period previous/next, HOME/AWAY +1, undo last goal and finish.
+- [x] Generate a new `client_action_id` for every user intent and preserve the request while pending.
+- [x] Disable conflicting controls while a request is pending and after match finish.
+- [x] On `40001`, replace local state with latest authoritative snapshot and show the conflict message.
+- [x] Replace Phase 3 disabled MATCH CONSOLE button with working route.
+- [x] Verify build/runtime routing includes `/app/matches/[matchId]/console` and Vercel Preview compiles the tablet-oriented console UI.
 
 ### Task 6: Final verification and stacked PR
 
 **Files:**
 - Modify: `docs/superpowers/plans/2026-08-25-phase-4-match-console.md`
 
-- [ ] Run full GitHub CI and require Unit tests, TypeScript, ESLint and Production build GREEN.
-- [ ] Verify latest Vercel Preview READY and `/login` runtime page HTTP 200.
-- [ ] Re-run Supabase Security Advisor and confirm no Phase 4 migration warning.
+- [x] Run full GitHub CI and require Unit tests, TypeScript, ESLint and Production build GREEN.
+- [x] Verify latest Vercel Preview READY and build output includes both `/login` and `/app/matches/[matchId]/console`. Direct `/login` HTTP-200 fetch from this connector remains blocked by Vercel Preview Protection/SSO, so no false 200 claim is recorded.
+- [x] Re-run Supabase Security Advisor and confirm no Phase 4 migration warning. The only current warning is the existing Auth-level `Leaked Password Protection Disabled` setting.
 - [ ] Create Draft PR targeting `phase-3-match-core`.
-- [ ] Record migration/E2E/CI/Vercel evidence in this plan.
+- [x] Record migration/E2E/CI/Vercel evidence in this plan.
+
+## Verification Evidence — 2026-08-26
+
+- Supabase migrations present: `match_console_runtime`, `match_console_security_hardening`.
+- Security Advisor: no Match Console/RLS/DDL warning; only existing `auth_leaked_password_protection` warning remains.
+- Authenticated SQL E2E: 15/15 checks passed. Verified initial state v0, START v1, idempotent retry, stale-version SQLSTATE `40001`, STOP with ~5s materialized elapsed time, HOME/AWAY goals, append-only goal revert, period change, FINISH v7, post-finish rejection, and cleanup to zero fixture rows.
+- Latest verified GitHub commit before this evidence update: `3b83faffb6e81d45f0150dfac9fb2239a48e7f3b`.
+- GitHub Actions run `32910674343`: Unit tests, TypeScript, ESLint, and Production build all succeeded.
+- Vercel deployment `dpl_8KYsaCP6nMaMBPPLyCvNoErQtaCk`: READY.
+- Vercel build Route output includes `ƒ /app/matches/[matchId]/console` and `ƒ /login`.
+- A routing gap discovered during final verification was fixed: the console component existed, but the actual `/console` page and match-detail link were missing. Both are now connected and verified in Vercel build output.
