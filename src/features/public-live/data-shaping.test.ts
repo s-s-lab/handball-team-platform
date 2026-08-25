@@ -65,7 +65,7 @@ describe("shapePublicLiveMatch", () => {
   });
 
   it("rejects a payload with missing state", () => {
-    const { state: _state, ...missingState } = validPayload;
+    const missingState = { ...validPayload, state: undefined };
     expect(shapePublicLiveMatch(missingState)).toBeNull();
   });
 
