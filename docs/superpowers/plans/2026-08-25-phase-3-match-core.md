@@ -1,10 +1,10 @@
 # Phase 3 Match Core Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for completed work.
 
 **Goal:** Let any team user member create a handball match with editable rules, snapshot a participating roster, and review the setup before Match Console is added.
 
-**Architecture:** `matches` owns match metadata, `match_rules` is a one-to-one immutable-at-creation configuration that remains editable before/during setup, and `match_rosters` stores historical snapshots copied by the database from Team Core roster rows. RLS authorizes actual team membership; public access is not expanded in this phase. Match events/state/timer remain isolated to Phase 4.
+**Architecture:** `matches` owns match metadata, `match_rules` stores one-to-one per-match configuration, and `match_rosters` stores historical snapshots copied by PostgreSQL from Team Core roster rows. RLS authorizes actual team membership; public access is not expanded in this phase. Match events/state/timer remain isolated to Phase 4.
 
 **Tech Stack:** Next.js 16.x, React 19.x, TypeScript, Tailwind CSS 4.x, shadcn/ui source components, Supabase PostgreSQL/Auth, Vitest, GitHub Actions, Vercel.
 
@@ -16,139 +16,85 @@
 - Do not use or commit a Supabase service-role key.
 - Match authorization derives from `team_user_memberships`, for both `admin` and `member` roles.
 - Opponents do not need platform accounts; Phase 3 stores `opponent_name` only.
-- Match roster snapshots must be copied from trusted `team_members` rows in PostgreSQL, never trusted browser snapshot fields.
+- Match roster snapshots are copied from trusted `team_members` rows in PostgreSQL, never browser snapshot fields.
 - Phase 3 introduces no anonymous match-table access.
-- `match_events`, `match_state`, timer runtime, scoring, Realtime and offline sync are out of scope.
+- `match_events`, `match_state`, timer runtime, scoring, Realtime and offline sync remain out of scope.
 - All application mutations parse user input before database calls and rely on RLS/RPC validation as the final boundary.
 
 ---
 
 ### Task 1: Match types and validation
 
-**Files:**
-- Create: `src/features/matches/types.ts`
-- Create: `src/features/matches/validation.ts`
-- Test: `src/features/matches/validation.test.ts`
+**Files:** `src/features/matches/types.ts`, `src/features/matches/validation.ts`, `src/features/matches/validation.test.ts`
 
-**Interfaces:**
-- Produces `MATCH_SIDES = ["home", "away"] as const`.
-- Produces `parseMatchForm(formData: FormData): ParseResult<MatchInput>`.
-- Produces `parseRosterForm(formData: FormData): ParseResult<MatchRosterInput>`.
-- Produces `japanLocalDateTimeToIso(value: string): string | null`.
-
-- [ ] **Step 1: Commit failing parser tests first.** Include valid HOME match, AWAY match, invalid team UUID, required match/opponent name, invalid calendar datetime, Tokyo conversion, rule integer/range failures, and deduplicated roster UUID parsing.
-
-Example required behavior:
-
-```ts
-expect(japanLocalDateTimeToIso("2026-08-30T13:30")).toBe("2026-08-30T04:30:00.000Z");
-expect(japanLocalDateTimeToIso("2026-02-30T13:30")).toBeNull();
-```
-
-- [ ] **Step 2: Observe RED in CI** because `./validation` does not yet exist.
-- [ ] **Step 3: Implement minimal types/parsers.** Rules returned by `parseMatchForm` must use seconds internally:
-
-```ts
-type MatchRulesInput = {
-  periodCount: number;
-  periodSeconds: number;
-  halftimeSeconds: number;
-  overtimeEnabled: boolean;
-  overtimePeriodCount: number;
-  overtimePeriodSeconds: number;
-  teamTimeoutsPerGame: number;
-  teamTimeoutsPerPeriod: number;
-  teamTimeoutSeconds: number;
-};
-```
-
-- [ ] **Step 4: Verify parser tests GREEN, then full CI GREEN.**
+- [x] Commit failing parser tests first, covering HOME/AWAY, malformed UUIDs, required fields, invalid calendar datetimes, Tokyo conversion, rule ranges and deduplicated roster IDs.
+- [x] Observe real RED in GitHub CI because `./validation` did not exist; the pre-existing 31 tests passed.
+- [x] Implement typed match/rule/roster inputs and parsers using seconds internally.
+- [x] Verify parser tests and the full CI command set GREEN.
 
 ### Task 2: Match schema, RLS and atomic RPCs
 
 **Files:**
-- Create: `supabase/migrations/20260825140000_match_core.sql`
+- `supabase/migrations/20260825140000_match_core.sql`
+- `supabase/migrations/20260825141000_match_roster_configured.sql`
 
-**Interfaces:**
-- Produces enums `match_status`, `team_side`.
-- Produces tables `matches`, `match_rules`, `match_rosters`.
-- Produces `private.can_manage_match(uuid)`.
-- Produces `create_match_with_rules(...) returns uuid`.
-- Produces `set_match_roster(uuid, uuid[]) returns integer` where the integer is the selected-row count.
-
-- [ ] **Step 1: Commit migration SQL before applying it.** Add constraints and indexes from the spec, enable RLS on all three tables, and revoke anonymous access.
-- [ ] **Step 2: Implement match creation atomically.** The exposed RPC checks authenticated team membership and creates both rows in one transaction. It always writes `status='scheduled'`.
-- [ ] **Step 3: Implement roster replacement atomically.** Validate every supplied `team_member_id` belongs to the match's team, delete previous snapshots, then insert snapshots with:
-
-```sql
-select
-  p_match_id,
-  tm.id,
-  tm.kind,
-  tm.full_name,
-  tm.display_name,
-  tm.shirt_number,
-  tm.primary_position
-from public.team_members tm
-where tm.id = any(p_team_member_ids)
-  and tm.team_id = v_team_id;
-```
-
-Reject the call if the count of distinct requested UUIDs differs from the count of validated rows.
-- [ ] **Step 4: Apply the committed migration through Supabase migration tooling.**
-- [ ] **Step 5: Verify tables/RLS/policies/function grants and run Security Advisor.** Resolve every warning attributable to this migration through a new migration rather than rewriting an applied migration.
+- [x] Commit the base match migration before applying it.
+- [x] Create `matches`, `match_rules`, `match_rosters`, constraints/indexes, RLS, and no anonymous access.
+- [x] Implement atomic `create_match_with_rules(...)` for authenticated team members.
+- [x] Implement atomic `set_match_roster(uuid, uuid[])`, validating all IDs belong to the match team before replacement and copying snapshots from trusted `team_members` rows.
+- [x] Apply the committed base migration through Supabase migration tooling.
+- [x] During roster UI implementation, identify that zero saved rows cannot distinguish “never configured” from “intentionally empty”; add a new migration rather than rewriting the applied migration.
+- [x] Add `matches.roster_configured_at` and update it on every successful roster save, including zero selections.
+- [x] Verify all three tables have RLS enabled; anonymous users cannot execute match RPCs; public RPC wrappers use `SECURITY INVOKER`; elevated implementations remain in the `private` schema.
+- [x] Run Security Advisor. No warning is attributable to Phase 3. The only remaining warning is the pre-existing Auth setting `auth_leaked_password_protection`.
 
 ### Task 3: Match data access, actions and creation UI
 
 **Files:**
-- Create: `src/features/matches/data.ts`
-- Create: `src/features/matches/actions.ts`
-- Create: `src/components/matches/match-form.tsx`
-- Create: `src/app/app/teams/[teamId]/matches/new/page.tsx`
-- Modify: `src/app/app/teams/[teamId]/page.tsx`
+- `src/features/matches/data.ts`
+- `src/features/matches/actions.ts`
+- `src/components/matches/match-form.tsx`
+- `src/app/app/teams/[teamId]/matches/new/page.tsx`
+- `src/app/app/teams/[teamId]/page.tsx`
 
-**Interfaces:**
-- `listTeamMatches(teamId)` returns match list ordered by `scheduled_at`.
-- `getMatchForCurrentUser(matchId)` returns match metadata + rules + roster or null.
-- `createMatch(formData)` calls `create_match_with_rules` and redirects to `/app/matches/[id]/roster`.
-
-- [ ] **Step 1: Add a failing pure-data shaping/error test if a new mapping helper is needed; otherwise rely on Task 1 parser RED coverage.**
-- [ ] **Step 2: Implement server-only data reads under current-user RLS.** Query independent rules/roster data with `Promise.all` after the parent match is authorized.
-- [ ] **Step 3: Implement `createMatch`.** Parse FormData, call the atomic RPC, map database errors to user-safe Japanese messages, revalidate team/app paths, redirect to roster selection.
-- [ ] **Step 4: Build the match form.** Use existing Field/Input/Card/Button conventions; include HOME/AWAY, `datetime-local`, venue/memo/public toggle, and editable rule settings. Defaults are 2 x 30 min, halftime 10 min, overtime 2 x 5 min disabled, team timeouts 2/game and 1/period, 60 seconds.
-- [ ] **Step 5: Add `試合を作成` and match list to team detail for any team user role, not admin only.**
-- [ ] **Step 6: Verify tests, TypeScript, ESLint, and production build.**
+- [x] Implement RLS-scoped `listTeamMatches(teamId)` and `getMatchForCurrentUser(matchId)`.
+- [x] Implement `createMatch(formData)` with parser validation, atomic RPC, Japanese safe errors, cache revalidation and roster-page redirect.
+- [x] Build match creation form with HOME/AWAY, Japan `datetime-local`, venue/memo/public flag and editable rule values.
+- [x] Use defaults 2 × 30 min, halftime 10 min, overtime disabled with 2 × 5 min values, TTO 2/game, 1/period, 60 sec.
+- [x] Add match list and `試合を作成` action to team detail for both `admin` and `member` team roles.
+- [x] Verify Unit tests, TypeScript, ESLint and production build GREEN.
 
 ### Task 4: Match roster snapshot selection
 
 **Files:**
-- Create: `src/components/matches/match-roster-form.tsx`
-- Create: `src/app/app/matches/[matchId]/roster/page.tsx`
-- Modify: `src/features/matches/actions.ts`
-- Modify: `src/features/matches/data.ts`
+- `src/components/matches/match-roster-form.tsx`
+- `src/app/app/matches/[matchId]/roster/page.tsx`
+- `src/features/matches/actions.ts`
+- `src/features/matches/data.ts`
 
-**Interfaces:**
-- `listActiveTeamMembersForMatch(matchId)` returns active source roster plus current selected IDs.
-- `saveMatchRoster(formData)` parses UUIDs, calls `set_match_roster`, and redirects to match detail.
-
-- [ ] **Step 1: Use Task 1 roster parser tests as the mutation input contract.** Duplicate UUIDs are deduplicated; malformed IDs fail before RPC.
-- [ ] **Step 2: Implement source-roster read.** Only active `team_members` from the match team are candidates. Existing snapshots map back to selected IDs when the linked source row still exists.
-- [ ] **Step 3: Build the selection UI.** Checkboxes default selected for all active team members only when the match has no saved snapshots; after first save, preserve the saved selection. Include shirt number, name, kind and position for quick scanning.
-- [ ] **Step 4: Implement `saveMatchRoster` and verify no browser-provided name/number/position is sent to the snapshot RPC.**
-- [ ] **Step 5: Verify tests, TypeScript, ESLint, and production build.**
+- [x] Use the roster parser contract: malformed IDs fail before RPC and duplicate IDs are deduplicated.
+- [x] Read only active source `team_members` for selection candidates.
+- [x] Select all active members by default only before the first save; after configuration, preserve the exact saved selection including an intentionally empty roster.
+- [x] Build player/staff selection UI with shirt number, internal name, kind and position.
+- [x] Implement `saveMatchRoster`. Browser payload contains only match/member IDs; snapshot name/number/position are copied in PostgreSQL.
+- [x] Verify Unit tests, TypeScript, ESLint and production build GREEN.
 
 ### Task 5: Match detail and integration verification
 
 **Files:**
-- Create: `src/app/app/matches/[matchId]/page.tsx`
-- Modify: `docs/superpowers/plans/2026-08-25-phase-3-match-core.md`
+- `src/app/app/matches/[matchId]/page.tsx`
+- this plan
 
-**Interfaces:**
-- Match detail consumes `getMatchForCurrentUser` only.
+- [x] Build match detail with opponent, HOME/AWAY, Japan time, venue/memo, rule summary and roster snapshots.
+- [x] Add roster-edit action and intentionally disabled MATCH CONSOLE action without fake score/live state.
+- [x] Create stacked Draft PR #3 targeting `phase-2-team-core`: `https://github.com/s-s-lab/handball-team-platform/pull/3`.
+- [x] Verify latest feature commit `286000bbd261b98944b8d460dfa61ed19ad25346` through GitHub Actions run `32849694257`: Unit tests, TypeScript, ESLint and Production build all success.
+- [x] Verify Vercel Preview deployment `dpl_3RtBzAhQ8ofxY9ryYbJL6mYGuHAj` is READY and `/login` returns HTTP 200 with the expected runtime configuration.
+- [x] Run authenticated transactional SQL E2E using an actual `authenticated` role context.
+- [x] E2E result: `match_created=true`, `rules_created=true`, `snapshot_unchanged=true`, `cross_team_rejected=true`, `roster_preserved_after_reject=true`, `empty_save_count=0`, `roster_configured=true`.
+- [x] Roll back E2E and verify zero test organizations, teams and matches remain.
+- [x] Re-run Security Advisor after the supplemental migration; no Phase 3 migration warning is present.
 
-- [ ] **Step 1: Build match detail.** Render match/opponent, HOME/AWAY, scheduled Japan time, venue, rule summary and roster snapshots. Add edit-roster action. Render the Match Console action disabled with text that it is added in the next phase; do not render fake score/live state.
-- [ ] **Step 2: Create Draft PR #3 targeting `phase-2-team-core`.** This is a stacked PR until prior phases merge.
-- [ ] **Step 3: Verify GitHub CI GREEN and Vercel Preview READY.**
-- [ ] **Step 4: Run transactional authenticated SQL E2E.** Create match/rules, select roster, mutate the source member's name/number, verify snapshot remains unchanged, try a roster member from another team and verify the RPC rejects atomically, then roll back.
-- [ ] **Step 5: Run Supabase Security Advisor and confirm no Phase 3 migration warnings.**
-- [ ] **Step 6: Record verification evidence in this plan.**
+## Phase 3 Result
+
+Phase 3 is complete on branch `phase-3-match-core` and remains intentionally unmerged as stacked Draft PR #3. Match runtime events, current projection, clock, scoring, undo and finish behavior proceed in Phase 4.
