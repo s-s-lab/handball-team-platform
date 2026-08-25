@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public-client";
 import { shapePublicTeamMembers, type PublicTeamMember } from "./public-data-shaping";
 import type { HandballPosition, TeamMemberKind } from "./types";
 
@@ -31,7 +31,7 @@ type PublicTeamMemberRow = {
 };
 
 export async function getPublicTeamBySlug(slug: string): Promise<PublicTeam | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_public_team", { p_slug: slug });
 
   if (error) throw new Error("公開チーム情報を読み込めませんでした。");
@@ -48,7 +48,7 @@ export async function getPublicTeamBySlug(slug: string): Promise<PublicTeam | nu
 }
 
 export async function getPublicTeamMembers(teamId: string): Promise<PublicTeamMember[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_public_team_members", { p_team_id: teamId });
 
   if (error) throw new Error("公開ロスターを読み込めませんでした。");
