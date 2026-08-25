@@ -2,7 +2,7 @@ import {
   effectiveElapsedMs,
   formatClock,
   periodDurationMs,
-} from "@/features/match-console/runtime";
+} from "../match-console/runtime";
 import type { PublicLiveMatch, PublicMatchSummary } from "./types";
 
 function toConsoleRuntime(live: PublicLiveMatch) {
