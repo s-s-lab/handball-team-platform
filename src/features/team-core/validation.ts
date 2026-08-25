@@ -90,6 +90,11 @@ export function parseTeamMemberForm(formData: FormData): ParseResult<TeamMemberI
   const displayNameRaw = text(formData, "displayName");
   if (displayNameRaw.length > 100) return invalid("表示名は100文字以内で入力してください。");
 
+  const isPublic = formData.get("isPublic") === "on";
+  if (isPublic && !displayNameRaw) {
+    return invalid("公開する場合は公開表示名を入力してください。");
+  }
+
   const gradeOrAgeRaw = text(formData, "gradeOrAge");
   if (gradeOrAgeRaw.length > 40) return invalid("学年・年齢は40文字以内で入力してください。");
 
@@ -123,7 +128,7 @@ export function parseTeamMemberForm(formData: FormData): ParseResult<TeamMemberI
       primaryPosition,
       gradeOrAge: optionalText(gradeOrAgeRaw),
       isActive: formData.get("isActive") === "on",
-      isPublic: formData.get("isPublic") === "on",
+      isPublic,
     },
   };
 }
