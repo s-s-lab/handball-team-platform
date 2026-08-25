@@ -64,3 +64,22 @@ export type MatchRecord = MatchListItem & {
   rules: MatchRulesRecord;
   roster: MatchRosterRecord[];
 };
+
+export type MatchRosterCandidate = {
+  id: string;
+  kind: "player" | "staff";
+  fullName: string;
+  displayName: string | null;
+  shirtNumber: number | null;
+  primaryPosition: "GK" | "LW" | "LB" | "CB" | "RB" | "RW" | "PV" | null;
+};
+
+export type MatchRosterSelection = {
+  matchId: string;
+  teamId: string;
+  matchName: string;
+  opponentName: string;
+  candidates: MatchRosterCandidate[];
+  selectedIds: string[];
+  hasConfiguredRoster: boolean;
+};
