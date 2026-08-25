@@ -14,7 +14,8 @@ function authErrorPath(path: "/login" | "/signup", message: string, next?: strin
 
 export async function login(formData: FormData) {
   const parsed = parseCredentials(formData);
-  const next = safeNextPath(formData.get("next") as string | null);
+  const rawNext = formData.get("next");
+  const next = safeNextPath(typeof rawNext === "string" ? rawNext : null);
 
   if (!parsed.ok) redirect(authErrorPath("/login", parsed.message, next));
 
