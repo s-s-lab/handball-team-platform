@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "@/app/auth/actions";
+import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Brand } from "@/components/site/brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   <FieldLabel htmlFor="password">パスワード</FieldLabel>
                   <Input id="password" name="password" type="password" autoComplete="current-password" minLength={8} required />
                 </Field>
-                <Button type="submit" size="lg" className="w-full">ログイン</Button>
+                <PendingSubmitButton idleLabel="ログイン" pendingLabel="ログイン中…" className="w-full" />
                 <FieldDescription className="text-center">アカウントをお持ちでない方は <Link className="font-semibold text-foreground underline underline-offset-4" href="/signup">新規登録</Link></FieldDescription>
               </FieldGroup>
             </form>
