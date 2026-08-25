@@ -1,0 +1,56 @@
+export const CONSOLE_ACTIONS = [
+  "start_clock",
+  "stop_clock",
+  "reset_clock",
+  "set_period",
+  "goal",
+  "undo_last_goal",
+  "finish_match",
+] as const;
+
+export type ConsoleActionName = (typeof CONSOLE_ACTIONS)[number];
+export type ConsoleMatchStatus = "scheduled" | "live" | "finished" | "cancelled";
+
+export type ConsoleSnapshot = {
+  matchId: string;
+  version: number;
+  currentPeriod: number;
+  clockElapsedMs: number;
+  clockRunning: boolean;
+  clockStartedAt: string | null;
+  homeScore: number;
+  awayScore: number;
+  matchStatus: ConsoleMatchStatus;
+  periodDurationMs: number;
+  serverNow: string;
+};
+
+export type ConsoleRules = {
+  periodCount: number;
+  periodSeconds: number;
+  overtimeEnabled: boolean;
+  overtimePeriodCount: number;
+  overtimePeriodSeconds: number;
+};
+
+export type ConsoleActionInput = {
+  matchId: string;
+  clientActionId: string;
+  expectedVersion: number;
+  action: ConsoleActionName;
+  payload: Record<string, string | number>;
+};
+
+export type MatchConsoleData = {
+  matchId: string;
+  matchName: string;
+  teamId: string;
+  homeName: string;
+  awayName: string;
+  rules: ConsoleRules;
+  snapshot: ConsoleSnapshot;
+};
+
+export type ConsoleActionResult =
+  | { ok: true; snapshot: ConsoleSnapshot; message?: string }
+  | { ok: false; message: string; snapshot?: ConsoleSnapshot };
