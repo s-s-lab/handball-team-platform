@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signup } from "@/app/auth/actions";
+import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Brand } from "@/components/site/brand";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                   <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
                   <FieldDescription>8文字以上で設定してください。</FieldDescription>
                 </Field>
-                <Button type="submit" size="lg" className="w-full">無料で始める</Button>
+                <PendingSubmitButton idleLabel="無料で始める" pendingLabel="送信中…" className="w-full" />
                 <FieldDescription className="text-center">すでにアカウントをお持ちの方は <Link className="font-semibold text-foreground underline underline-offset-4" href="/login">ログイン</Link></FieldDescription>
               </FieldGroup>
             </form>
