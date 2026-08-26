@@ -31,7 +31,7 @@ export type OfflineLocalAction = {
 };
 
 export type OfflineLocalActionResult =
-  | { ok: true; state: OfflineMatchState; event: RecordEvent | null }
+  | { ok: true; state: OfflineMatchState; event: RecordEvent }
   | { ok: false; message: string };
 
 export type OfflineEventTime = {
