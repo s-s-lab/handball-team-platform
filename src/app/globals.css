@@ -2,23 +2,32 @@
 @import "tw-animate-css";
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.19 0.025 255);
+  --workspace-ink: oklch(0.2 0.055 258);
+  --workspace-ink-soft: oklch(0.27 0.058 258);
+  --workspace-accent: oklch(0.62 0.19 257);
+  --workspace-highlight: oklch(0.82 0.16 86);
+  --workspace-surface: oklch(0.985 0.006 248);
+  --workspace-surface-strong: oklch(0.955 0.012 248);
+  --workspace-success: oklch(0.65 0.16 151);
+  --workspace-live: oklch(0.62 0.22 28);
+
+  --background: var(--workspace-surface);
+  --foreground: oklch(0.19 0.032 257);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.025 255);
-  --primary: oklch(0.23 0.055 255);
+  --card-foreground: oklch(0.19 0.032 257);
+  --primary: var(--workspace-accent);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.012 245);
-  --secondary-foreground: oklch(0.24 0.04 255);
-  --muted: oklch(0.97 0.008 245);
-  --muted-foreground: oklch(0.52 0.025 255);
-  --accent: oklch(0.93 0.045 195);
-  --accent-foreground: oklch(0.23 0.05 220);
-  --border: oklch(0.91 0.012 245);
-  --input: oklch(0.88 0.015 245);
-  --ring: oklch(0.67 0.13 195);
-  --destructive: oklch(0.58 0.22 28);
-  --radius: 0.75rem;
+  --secondary: oklch(0.94 0.018 250);
+  --secondary-foreground: oklch(0.25 0.045 257);
+  --muted: var(--workspace-surface-strong);
+  --muted-foreground: oklch(0.48 0.03 255);
+  --accent: oklch(0.92 0.035 252);
+  --accent-foreground: oklch(0.23 0.06 257);
+  --border: oklch(0.89 0.015 248);
+  --input: oklch(0.86 0.018 248);
+  --ring: var(--workspace-accent);
+  --destructive: oklch(0.59 0.22 28);
+  --radius: 0.9rem;
 }
 
 @theme inline {
@@ -38,7 +47,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
 }
 
 * {
@@ -46,18 +55,42 @@
 }
 
 html {
-  background: var(--background);
+  background: var(--workspace-surface);
 }
 
 body {
   min-height: 100vh;
-  background: var(--background);
+  background: var(--workspace-surface);
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 ::selection {
-  background: var(--accent);
-  color: var(--accent-foreground);
+  background: color-mix(in oklch, var(--workspace-accent) 24%, white);
+  color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

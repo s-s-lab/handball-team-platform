@@ -15,6 +15,12 @@ export type WorkspaceNavItem = {
   mobilePrimary: boolean;
 };
 
+export type WorkspaceTeam = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export function getWorkspaceNav(teamId: string): WorkspaceNavItem[] {
   const base = `/app/teams/${teamId}`;
 
@@ -44,4 +50,13 @@ export function isWorkspaceNavActive(pathname: string, href: string): boolean {
   if (isTeamHome) return false;
 
   return current.startsWith(`${target}/`);
+}
+
+export function resolveWorkspaceTeamId(pathname: string): string | null {
+  const match = pathname.match(/^\/app\/teams\/([^/]+)(?:\/|$)/);
+  return match?.[1] ?? null;
+}
+
+export function isMatchOperationRoute(pathname: string): boolean {
+  return /^\/app\/matches\/[^/]+(?:\/|$)/.test(pathname);
 }
