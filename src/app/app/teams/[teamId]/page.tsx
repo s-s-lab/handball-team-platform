@@ -3,7 +3,6 @@ import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { TeamDashboard } from "@/components/team-dashboard/team-dashboard";
-import { RosterList } from "@/components/team-core/roster-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listUpcomingTeamEvents } from "@/features/schedule/data";
@@ -64,17 +63,6 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         summary={summary}
         nextActivity={upcomingEvents[0] ?? null}
       />
-
-      <section className="border-t border-border/80 pt-6" aria-labelledby="team-members-heading">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-black tracking-[0.16em] text-muted-foreground">ROSTER</p>
-            <h2 id="team-members-heading" className="mt-1 text-2xl font-black tracking-tight">メンバー</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">登録済みメンバーを確認・更新できます。</p>
-        </div>
-        <RosterList teamId={team.id} roster={team.roster} isAdmin={isAdmin} />
-      </section>
 
       <Card className="border-border/80 shadow-none">
         <CardHeader>
