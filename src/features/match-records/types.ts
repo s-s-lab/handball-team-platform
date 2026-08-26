@@ -16,9 +16,9 @@ export type RecordEventType =
 export type TeamSide = "home" | "away";
 
 export type RecordSubject = {
-  side: TeamSide | null;
-  teamMemberId: string | null;
-  matchRosterId: string | null;
+  subjectSide: TeamSide | null;
+  subjectTeamMemberId: string | null;
+  subjectMatchRosterId: string | null;
   shirtNumber: number | null;
   displayName: string | null;
 };
