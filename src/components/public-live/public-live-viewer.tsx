@@ -12,6 +12,8 @@ import { createPublicClient } from "@/lib/supabase/public-client";
 
 type ConnectionState = "connecting" | "connected" | "reconnecting";
 
+const LIVE_RECONCILE_INTERVAL_MS = 3_000;
+
 function periodLabel(currentPeriod: number, periodCount: number) {
   if (periodCount === 2 && currentPeriod === 1) return "前半";
   if (periodCount === 2 && currentPeriod === 2) return "後半";
@@ -53,6 +55,7 @@ export function PublicLiveViewer({ initialMatch }: { initialMatch: PublicLiveMat
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
   const serverOffsetMsRef = useRef(0);
+  const refreshInFlightRef = useRef(false);
 
   const teamIsHome = match.teamSide === "home";
   const homeName = teamIsHome ? match.teamName : match.opponentName;
@@ -77,10 +80,11 @@ export function PublicLiveViewer({ initialMatch }: { initialMatch: PublicLiveMat
   }, [finished, match]);
 
   useEffect(() => {
-    const supabase = createPublicClient();
-    const channel = supabase
-      .channel(`match:${initialMatch.matchId}:live`)
-      .on("broadcast", { event: "state_changed" }, async () => {
+    const refreshMatch = async () => {
+      if (refreshInFlightRef.current) return;
+      refreshInFlightRef.current = true;
+
+      try {
         const refreshed = await getPublicLiveMatch(initialMatch.matchId);
         if (!refreshed) {
           setRefreshMessage("最新状態を取得できませんでした。接続を維持して再試行します。");
@@ -91,10 +95,21 @@ export function PublicLiveViewer({ initialMatch }: { initialMatch: PublicLiveMat
         setMatch((current) =>
           refreshed.state.version >= current.state.version ? refreshed : current,
         );
+      } finally {
+        refreshInFlightRef.current = false;
+      }
+    };
+
+    const supabase = createPublicClient();
+    const channel = supabase
+      .channel(`match:${initialMatch.matchId}:live`)
+      .on("broadcast", { event: "state_changed" }, () => {
+        void refreshMatch();
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setConnectionState("connected");
+          void refreshMatch();
           return;
         }
         if (status === "TIMED_OUT" || status === "CHANNEL_ERROR" || status === "CLOSED") {
@@ -104,7 +119,27 @@ export function PublicLiveViewer({ initialMatch }: { initialMatch: PublicLiveMat
         setConnectionState("connecting");
       });
 
+    const reconcileInterval = window.setInterval(() => {
+      void refreshMatch();
+    }, LIVE_RECONCILE_INTERVAL_MS);
+
+    const handleOnline = () => {
+      void refreshMatch();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshMatch();
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
+      window.clearInterval(reconcileInterval);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };
   }, [initialMatch.matchId]);
