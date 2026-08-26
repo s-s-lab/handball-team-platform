@@ -46,12 +46,12 @@ const roster: TeamMemberRecord[] = [
 
 describe("MemberDirectory", () => {
   it("renders searchable sports-roster navigation and profile links", async () => {
-    const module = await import("./member-directory").catch(() => null);
-    expect(module?.MemberDirectory).toBeTypeOf("function");
-    if (!module?.MemberDirectory) return;
+    const loaded = await import("./member-directory").catch(() => null);
+    expect(loaded?.MemberDirectory).toBeTypeOf("function");
+    if (!loaded?.MemberDirectory) return;
 
     const html = renderToStaticMarkup(
-      module.MemberDirectory({
+      loaded.MemberDirectory({
         teamId: "team-1",
         teamName: "青山ハンドボールクラブ",
         roster,
