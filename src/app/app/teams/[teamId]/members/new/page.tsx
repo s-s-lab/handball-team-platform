@@ -19,8 +19,8 @@ export default async function NewMemberPage({ params, searchParams }: NewMemberP
   return (
     <main className="max-w-2xl">
       <Button asChild variant="ghost" size="sm" className="-ml-3 mb-5">
-        <Link href={`/app/teams/${team.id}`}>
-          <ArrowLeft aria-hidden="true" /> チームへ戻る
+        <Link href={`/app/teams/${team.id}/members`}>
+          <ArrowLeft aria-hidden="true" /> メンバーへ戻る
         </Link>
       </Button>
 
