@@ -53,3 +53,16 @@ export function advanceReplayQueue(
       : item,
   );
 }
+
+export function rebaseReplayQueue(
+  queue: OfflineQueueItem[],
+  baseServerVersion: number,
+): OfflineQueueItem[] {
+  return [...queue]
+    .sort((a, b) => a.localSequence - b.localSequence)
+    .map((item) => ({
+      ...item,
+      baseServerVersion,
+      syncState: item.syncState === "failed" ? "failed" as const : "pending" as const,
+    }));
+}
