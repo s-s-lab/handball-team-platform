@@ -57,6 +57,7 @@ describe("HomePage", () => {
 
     expect(getPublicPortalMatches).toHaveBeenCalledOnce();
     expect(searchPublicTeams).toHaveBeenCalledWith("P6SEA");
+    expect(html).toContain("TEAM WORKSPACE");
     expect(html).toContain("公開試合");
     expect(html).toContain("チームを探す");
     expect(html).toContain("Phase 6 Public Handball");
