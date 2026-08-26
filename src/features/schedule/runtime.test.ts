@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildMonthDays, filterScheduleEvents, groupEventsByJapanDate, type ScheduleEvent } from "./runtime";
+import { buildMonthDays, filterScheduleEvents, groupEventsByJapanDate } from "./runtime";
+import type { ScheduleEvent } from "./types";
 
 const events: ScheduleEvent[] = [
   {
