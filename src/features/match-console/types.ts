@@ -42,6 +42,8 @@ export type ConsoleRules = {
   overtimeEnabled: boolean;
   overtimePeriodCount: number;
   overtimePeriodSeconds: number;
+  teamTimeoutsPerGame: number;
+  teamTimeoutsPerPeriod: number;
 };
 
 export type ConsoleParticipant = {
