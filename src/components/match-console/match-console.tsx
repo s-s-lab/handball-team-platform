@@ -44,6 +44,7 @@ import {
   advanceReplayQueue,
   buildReplayPlan,
   rebaseReplayQueue,
+  removeQueuedOptimisticEvents,
 } from "@/features/offline-match/sync";
 import type {
   OfflineMatchState,
@@ -514,7 +515,7 @@ export function MatchConsole({ data }: { data: MatchConsoleData }) {
       try {
         nextEvents = await refreshConsoleRecordEvents(data.matchId);
       } catch {
-        nextEvents = eventsRef.current.filter((event) => !event.id.startsWith("local-"));
+        nextEvents = removeQueuedOptimisticEvents(eventsRef.current, queueRef.current);
       }
       await clearOfflineMatchData(data.matchId);
       acceptedSnapshotRef.current = latest;
