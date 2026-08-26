@@ -72,7 +72,7 @@ export type MatchConsoleData = {
   awayName: string;
   rules: ConsoleRules;
   participants: ConsoleParticipant[];
-  recentEvents: RecordEvent[];
+  recordEvents: RecordEvent[];
   snapshot: ConsoleSnapshot;
 };
 
