@@ -5,7 +5,7 @@ import type { RecordEvent } from "@/features/match-records/types";
 import { createClient } from "@/lib/supabase/server";
 import { mapConsoleSnapshot } from "./data";
 import { mapConsoleActionDatabaseError } from "./errors";
-import type { ConsoleActionResult } from "./types";
+import type { ConsoleActionResult, ConsoleSnapshot } from "./types";
 import { parseConsoleAction } from "./validation";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -17,6 +17,11 @@ async function latestSnapshot(matchId: string) {
   });
   if (error) return undefined;
   return mapConsoleSnapshot(data) ?? undefined;
+}
+
+export async function refreshConsoleSnapshot(matchId: string): Promise<ConsoleSnapshot | null> {
+  if (!UUID_PATTERN.test(matchId)) return null;
+  return (await latestSnapshot(matchId)) ?? null;
 }
 
 export async function refreshConsoleRecordEvents(matchId: string): Promise<RecordEvent[]> {
