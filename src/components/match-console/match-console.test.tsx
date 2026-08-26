@@ -1,6 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MatchConsoleData } from "@/features/match-console/types";
+
+vi.mock("@/features/match-console/actions", () => ({
+  applyConsoleAction: async () => ({ ok: false, message: "not used in static render" }),
+}));
+
 import { MatchConsole } from "./match-console";
 
 const data: MatchConsoleData = {
