@@ -105,6 +105,8 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
       overtimeEnabled: match.rules.overtimeEnabled,
       overtimePeriodCount: match.rules.overtimePeriodCount,
       overtimePeriodSeconds: match.rules.overtimePeriodSeconds,
+      teamTimeoutsPerGame: match.rules.teamTimeoutsPerGame,
+      teamTimeoutsPerPeriod: match.rules.teamTimeoutsPerPeriod,
     },
     participants: match.roster.map((participant) => ({
       matchRosterId: participant.id,
