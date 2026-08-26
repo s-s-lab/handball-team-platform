@@ -12,14 +12,32 @@ import {
   RotateCcw,
   Undo2,
 } from "lucide-react";
-import { applyConsoleAction } from "@/features/match-console/actions";
+import { Button } from "@/components/ui/button";
+import { buildConsoleActionFormData } from "@/features/match-console/action-form";
+import {
+  applyConsoleAction,
+  refreshConsoleRecordEvents,
+} from "@/features/match-console/actions";
 import { effectiveElapsedMs, formatClock } from "@/features/match-console/runtime";
 import type {
   ConsoleActionName,
+  ConsoleActionPayload,
   ConsoleSnapshot,
   MatchConsoleData,
 } from "@/features/match-console/types";
-import { Button } from "@/components/ui/button";
+import { RecordDock } from "./record-dock";
+
+const RECORD_DOCK_ACTIONS = new Set<ConsoleActionName>([
+  "goal",
+  "attribute_goal",
+  "undo_last_goal",
+  "seven_meter_missed",
+  "warning",
+  "suspension",
+  "disqualification",
+  "team_timeout",
+  "revert_event",
+]);
 
 function periodLabel(currentPeriod: number, periodCount: number) {
   if (periodCount === 2 && currentPeriod === 1) return "前半";
@@ -28,10 +46,9 @@ function periodLabel(currentPeriod: number, periodCount: number) {
   return `延長${currentPeriod - periodCount}`;
 }
 
-type ActionPayload = { side?: "home" | "away"; period?: number };
-
 export function MatchConsole({ data }: { data: MatchConsoleData }) {
   const [snapshot, setSnapshot] = useState(data.snapshot);
+  const [recordEvents, setRecordEvents] = useState(data.recordEvents);
   const [serverOffsetMs, setServerOffsetMs] = useState(() => {
     const serverNow = Date.parse(data.snapshot.serverNow);
     return Number.isFinite(serverNow) ? serverNow - Date.now() : 0;
@@ -77,25 +94,40 @@ export function MatchConsole({ data }: { data: MatchConsoleData }) {
     return () => window.clearInterval(interval);
   }, [finished, runtimeSnapshot, serverOffsetMs, snapshot.clockRunning]);
 
-  async function runAction(action: ConsoleActionName, payload: ActionPayload = {}) {
+  async function runAction(action: ConsoleActionName, payload: ConsoleActionPayload = {}) {
     if (pending || finished) return;
 
     setPending(true);
     setMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.set("matchId", data.matchId);
-      formData.set("clientActionId", crypto.randomUUID());
-      formData.set("expectedVersion", String(snapshot.version));
-      formData.set("action", action);
-      if (payload.side) formData.set("side", payload.side);
-      if (payload.period) formData.set("period", String(payload.period));
+      const formData = buildConsoleActionFormData({
+        matchId: data.matchId,
+        clientActionId: crypto.randomUUID(),
+        expectedVersion: snapshot.version,
+        action,
+        payload,
+      });
 
       const result = await applyConsoleAction(formData);
       if (result.snapshot) adoptSnapshot(result.snapshot);
-      if (!result.ok) setMessage(result.message);
-      if (result.ok && action === "finish_match") setMessage("試合を終了しました。最終状態を保存しました。");
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
+
+      if (action === "finish_match") {
+        setMessage("試合を終了しました。最終状態を保存しました。");
+      }
+
+      if (RECORD_DOCK_ACTIONS.has(action)) {
+        try {
+          const nextEvents = await refreshConsoleRecordEvents(data.matchId);
+          setRecordEvents(nextEvents);
+        } catch {
+          setMessage("操作は保存されましたが、記録一覧を更新できませんでした。画面を再読み込みしてください。");
+        }
+      }
     } catch {
       setMessage("通信に失敗しました。最後に保存された状態は変更していません。もう一度お試しください。");
     } finally {
@@ -242,6 +274,18 @@ export function MatchConsole({ data }: { data: MatchConsoleData }) {
             </Button>
           </div>
         </div>
+
+        <RecordDock
+          managedSide={data.managedSide}
+          homeName={data.homeName}
+          awayName={data.awayName}
+          participants={data.participants}
+          snapshot={snapshot}
+          displayElapsedMs={displayElapsedMs}
+          events={recordEvents}
+          disabled={pending || finished}
+          onAction={runAction}
+        />
 
         <footer className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Button
