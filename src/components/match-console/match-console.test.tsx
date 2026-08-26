@@ -54,10 +54,12 @@ const data: MatchConsoleData = {
 };
 
 describe("MatchConsole", () => {
-  it("integrates the rule-aware record dock beneath the primary score controls", () => {
+  it("integrates the rule-aware record dock and visible sync state beneath the primary controls", () => {
     const html = renderToStaticMarkup(<MatchConsole data={data} />);
 
     expect(html).toContain('aria-label="MATCH CONSOLE"');
+    expect(html).toContain('aria-label="同期状態"');
+    expect(html).toContain("保存済み");
     expect(html).toContain('aria-label="試合記録操作"');
     for (const label of ["7m", "警告", "2分", "失格", "TTO", "記録"]) {
       expect(html).toContain(label);
