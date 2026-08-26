@@ -30,9 +30,10 @@ The feature organization is informed by the team-management patterns seen in tea
    - A team dashboard should immediately show next schedule, recent result, season record, member count, and player leaders.
 
 3. **Staff entry, player viewing by default**
-   - Staff/admin users manage members, schedules, match results, seasons, and season statistics.
-   - Players primarily browse information.
-   - Existing authorization remains intentionally lightweight but real; destructive and management actions remain staff/admin gated.
+   - Operationally, staff are expected to enter members, schedules, match results, seasons, and season statistics.
+   - Authentication permission is kept separate from roster classification: `team_members.kind = staff` does not itself grant write access.
+   - Existing team access roles remain the authority: authenticated team admins can manage data; ordinary team members primarily read/browse it.
+   - Existing authorization remains intentionally lightweight but real; destructive and management actions remain admin gated.
 
 4. **Tablet and mobile are first-class**
    - Desktop: persistent left navigation.
@@ -92,6 +93,15 @@ Calendar UX:
 - quick filters by category
 - upcoming list under the calendar
 
+#### Match/schedule synchronization
+
+Match activities must not require duplicate maintenance.
+
+- Creating a match from the Matches area creates or links one corresponding `team_events` row transactionally.
+- Creating an official/friendly schedule item may optionally create/link a match when the user chooses “試合として管理”.
+- For linked records, match date/time, opponent-facing match title, and venue changes are written through one server-side command so `matches` and `team_events` cannot silently diverge.
+- Deleting a schedule event never silently deletes historical match records; linked-match deletion requires an explicit match deletion action.
+
 ### Members
 
 Member directory supports:
@@ -118,9 +128,10 @@ Existing `matches`, `match_state`, `match_rosters`, and `match_events` remain th
 
 Match record views gain:
 
+- season
 - competition / tournament name
 - home/away label
-- period scores where available
+- period scores where available from recorded match events
 - final score
 - result state (win/draw/loss)
 - opponent
@@ -132,6 +143,8 @@ A completed match can be populated either:
 
 1. from the existing match console event log, or
 2. by staff entering a historical/manual result.
+
+Manual historical results require a final score but do not require period-by-period event reconstruction.
 
 ### Seasons
 
@@ -152,6 +165,8 @@ Season fields:
 - created_at / updated_at
 
 Exactly one season per team should normally be marked current in the UI, enforced transactionally when changed.
+
+Matches may link to a season through nullable `matches.season_id`. This powers current-season W-D-L summaries and keeps historical results grouped correctly.
 
 ### Player season statistics
 
@@ -203,6 +218,7 @@ Indexes:
 
 - `(team_id, starts_at)`
 - `(team_id, event_type, starts_at)`
+- unique partial index on `linked_match_id` where it is not null
 
 ### `seasons`
 
@@ -254,11 +270,16 @@ Derived UI values:
 
 Extend `matches` conservatively rather than creating a parallel result system:
 
+- season_id uuid nullable FK -> seasons
 - competition_name text nullable
 - completed_at timestamptz nullable
-- result_source enum/text (`console`, `manual`) if needed for provenance
+- result_source enum/text (`console`, `manual`) for provenance
 
-Final score continues to come from match state for console-managed matches. Manual historical results should initialize or safely write a finished `match_state` through a dedicated server action/RPC to preserve consistency.
+Indexes:
+
+- `(team_id, season_id, scheduled_at)`
+
+Final score continues to come from match state for console-managed matches. Manual historical results initialize or safely write a finished `match_state` through a dedicated server action/RPC to preserve consistency.
 
 ## 5. Authorization / RLS
 
@@ -266,8 +287,9 @@ All new tables use RLS.
 
 Baseline rules:
 
-- team members can read internal team workspace data for teams they belong to
-- team admins/staff can create/update/delete schedules, seasons, and season stats
+- authenticated team members can read internal team workspace data for teams they belong to
+- team admins can create/update/delete schedules, seasons, manual results, and season stats
+- roster classification (`player` / `staff`) is descriptive and does not bypass membership-role authorization
 - public access is **not** granted to new internal tables by default
 - public schedule/stat exposure, if introduced later, should use narrow read views/RPCs rather than direct broad table grants
 
@@ -407,6 +429,7 @@ Existing match detail/console routes remain compatible and should be linked from
 - migration + RLS for `team_events`
 - CRUD server actions
 - calendar/agenda UI
+- linked match/event synchronization command
 
 ### Phase 8D — Member directory refresh
 
@@ -416,6 +439,7 @@ Existing match detail/console routes remain compatible and should be linked from
 
 ### Phase 8E — Match results
 
+- add season and match metadata
 - richer match list/result presentation
 - manual historical result entry
 - preserve console path for live/offline recording
@@ -436,14 +460,17 @@ Existing match detail/console routes remain compatible and should be linked from
 - derived save percentage
 - date grouping and schedule filters
 - permission helpers
+- match/schedule synchronization input mapping
 
 ### Server/data tests
 
 - RLS: unauthorized users cannot read/write another team
-- staff/admin can manage team data
+- ordinary team members cannot perform admin writes
+- team admin can manage team data
 - season current uniqueness
 - stats constraints
 - manual result consistency with match state
+- linked match/event date and venue consistency
 
 ### Browser QA
 
@@ -457,9 +484,10 @@ Desktop + mobile flows:
 6. create season
 7. enter player stats
 8. add manual match result
-9. open existing match console
-10. verify console offline/reconnect path still works
-11. verify public LIVE still works without regression
+9. confirm linked match appears once in schedule
+10. open existing match console
+11. verify console offline/reconnect path still works
+12. verify public LIVE still works without regression
 
 ### Accessibility
 
@@ -489,7 +517,8 @@ Phase 8 is complete when:
 - the authenticated UI visibly feels like a modern sports team product rather than a generic admin screen
 - desktop, iPad, and mobile navigation are purpose-built
 - members, schedule, matches/results, seasons, and player stats each have clear dedicated surfaces
-- staff can manually maintain season statistics
+- staff can manually maintain season statistics through an admin-capable account
 - existing match console/offline/PWA/public LIVE behavior still passes regression QA
 - all new data is protected by RLS
+- linked matches do not require duplicate schedule maintenance
 - the Vercel preview is green and usable end-to-end
