@@ -107,6 +107,20 @@ describe("parseConsoleAction", () => {
     expect(parseConsoleAction(form({ ...base, action: "revert_event", targetEventId: "bad" })).ok).toBe(false);
   });
 
+  it("parses post-goal scorer attribution without changing score", () => {
+    const result = parseConsoleAction(form({
+      ...base,
+      action: "attribute_goal",
+      targetEventId: EVENT_ID,
+      subjectMatchRosterId: ROSTER_ID,
+    }));
+    expect(result.ok && result.value.payload).toEqual({
+      target_event_id: EVENT_ID,
+      subject_match_roster_id: ROSTER_ID,
+    });
+    expect(parseConsoleAction(form({ ...base, action: "attribute_goal", targetEventId: "bad", subjectMatchRosterId: ROSTER_ID })).ok).toBe(false);
+  });
+
   it("requires a positive integer period for set_period", () => {
     const valid = parseConsoleAction(form({ ...base, action: "set_period", period: "3" }));
     expect(valid.ok && valid.value.payload).toEqual({ period: 3 });
