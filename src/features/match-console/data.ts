@@ -1,5 +1,6 @@
 import "server-only";
 
+import { listMatchRecordEvents } from "@/features/match-records/data";
 import { getMatchForCurrentUser } from "@/features/matches/data";
 import { createClient } from "@/lib/supabase/server";
 import type { ConsoleMatchStatus, ConsoleSnapshot, MatchConsoleData } from "./types";
@@ -74,10 +75,12 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
   if (!match) return null;
 
   const supabase = await createClient();
-  const [{ data: team, error: teamError }, { data: rawSnapshot, error: snapshotError }] =
+  const recordEventsPromise = listMatchRecordEvents(matchId);
+  const [{ data: team, error: teamError }, { data: rawSnapshot, error: snapshotError }, recordEvents] =
     await Promise.all([
       supabase.from("teams").select("name").eq("id", match.teamId).maybeSingle(),
       supabase.rpc("get_match_console_snapshot", { p_match_id: matchId }),
+      recordEventsPromise,
     ]);
 
   if (teamError || snapshotError || !team) {
@@ -88,11 +91,15 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
   if (!snapshot) throw new Error("試合状態を読み込めませんでした。");
 
   const teamIsHome = match.teamSide === "home";
+  const recentEvents = [...recordEvents]
+    .sort((a, b) => b.stateVersion - a.stateVersion)
+    .slice(0, 12);
 
   return {
     matchId: match.id,
     matchName: match.name,
     teamId: match.teamId,
+    managedSide: match.teamSide,
     homeName: teamIsHome ? team.name : match.opponentName,
     awayName: teamIsHome ? match.opponentName : team.name,
     rules: {
@@ -102,6 +109,15 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
       overtimePeriodCount: match.rules.overtimePeriodCount,
       overtimePeriodSeconds: match.rules.overtimePeriodSeconds,
     },
+    participants: match.roster.map((participant) => ({
+      matchRosterId: participant.id,
+      teamMemberId: participant.teamMemberId,
+      kind: participant.kind,
+      displayName: participant.displayNameSnapshot?.trim() || participant.fullNameSnapshot,
+      shirtNumber: participant.shirtNumberSnapshot,
+      primaryPosition: participant.primaryPositionSnapshot,
+    })),
+    recentEvents,
     snapshot,
   };
 }
