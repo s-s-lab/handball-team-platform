@@ -34,4 +34,18 @@ describe("team workspace navigation", () => {
       workspaceNav.isWorkspaceNavActive("/app/teams/team-1/members", "/app/teams/team-1"),
     ).toBe(false);
   });
+
+  it("resolves team workspace routes without treating the operational match console as a team route", async () => {
+    const workspaceNav = await import("./workspace-nav").catch(() => null);
+
+    expect(workspaceNav?.resolveWorkspaceTeamId).toBeTypeOf("function");
+    expect(workspaceNav?.isMatchOperationRoute).toBeTypeOf("function");
+    if (!workspaceNav?.resolveWorkspaceTeamId || !workspaceNav?.isMatchOperationRoute) return;
+
+    expect(workspaceNav.resolveWorkspaceTeamId("/app/teams/team-1/stats")).toBe("team-1");
+    expect(workspaceNav.resolveWorkspaceTeamId("/app")).toBeNull();
+    expect(workspaceNav.resolveWorkspaceTeamId("/app/matches/match-1")).toBeNull();
+    expect(workspaceNav.isMatchOperationRoute("/app/matches/match-1")).toBe(true);
+    expect(workspaceNav.isMatchOperationRoute("/app/teams/team-1/matches")).toBe(false);
+  });
 });
