@@ -40,11 +40,11 @@ const profile: MemberProfileData = {
 
 describe("MemberProfile", () => {
   it("renders member identity, roster metadata and recent appearances", async () => {
-    const module = await import("./member-profile").catch(() => null);
-    expect(module?.MemberProfile).toBeTypeOf("function");
-    if (!module?.MemberProfile) return;
+    const loaded = await import("./member-profile").catch(() => null);
+    expect(loaded?.MemberProfile).toBeTypeOf("function");
+    if (!loaded?.MemberProfile) return;
 
-    const html = renderToStaticMarkup(module.MemberProfile({ profile }));
+    const html = renderToStaticMarkup(loaded.MemberProfile({ profile }));
     const text = html.replace(/<[^>]+>/g, "");
 
     expect(text).toContain("鈴木 太郎");
