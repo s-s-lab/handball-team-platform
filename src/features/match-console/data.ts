@@ -21,6 +21,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
   const version = finiteNumber(value.version);
   const currentPeriod = finiteNumber(value.current_period);
   const clockElapsedMs = finiteNumber(value.clock_elapsed_ms);
+  const competitionElapsedMs = finiteNumber(value.competition_elapsed_ms);
   const clockRunning = typeof value.clock_running === "boolean" ? value.clock_running : null;
   const clockStartedAt =
     value.clock_started_at === null || typeof value.clock_started_at === "string"
@@ -40,6 +41,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
     version === null ||
     currentPeriod === null ||
     clockElapsedMs === null ||
+    competitionElapsedMs === null ||
     clockRunning === null ||
     clockStartedAt === undefined ||
     homeScore === null ||
@@ -56,6 +58,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
     version,
     currentPeriod,
     clockElapsedMs,
+    competitionElapsedMs,
     clockRunning,
     clockStartedAt,
     homeScore,
