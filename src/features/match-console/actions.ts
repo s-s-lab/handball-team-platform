@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { mapConsoleSnapshot } from "./data";
+import { mapConsoleActionDatabaseError } from "./errors";
 import type { ConsoleActionResult } from "./types";
 import { parseConsoleAction } from "./validation";
 
@@ -36,22 +37,16 @@ export async function applyConsoleAction(formData: FormData): Promise<ConsoleAct
       };
     }
 
-    if (error.code === "42501") {
-      return { ok: false, message: "この試合を操作する権限がありません。" };
-    }
-
+    const message = mapConsoleActionDatabaseError(error.code, error.message);
     if (error.code === "22023") {
       return {
         ok: false,
-        message: "この操作は現在の試合状態では実行できません。最新状態を確認してください。",
+        message,
         snapshot: await latestSnapshot(parsed.value.matchId),
       };
     }
 
-    return {
-      ok: false,
-      message: "試合状態を更新できませんでした。通信状態を確認してもう一度お試しください。",
-    };
+    return { ok: false, message };
   }
 
   const snapshot = mapConsoleSnapshot(data);
