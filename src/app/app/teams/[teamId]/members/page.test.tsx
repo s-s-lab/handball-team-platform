@@ -46,11 +46,11 @@ describe("TeamMembersPage", () => {
       ],
     });
 
-    const module = await import("./page").catch(() => null);
-    expect(module?.default).toBeTypeOf("function");
-    if (!module?.default) return;
+    const loaded = await import("./page").catch(() => null);
+    expect(loaded?.default).toBeTypeOf("function");
+    if (!loaded?.default) return;
 
-    const node = await module.default({
+    const node = await loaded.default({
       params: Promise.resolve({ teamId: "team-1" }),
       searchParams: Promise.resolve({ q: "鈴木", filter: "players" }),
     });
