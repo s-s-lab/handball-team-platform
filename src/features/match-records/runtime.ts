@@ -30,6 +30,32 @@ function revertedIds(events: RecordEvent[]): Set<string> {
   return ids;
 }
 
+function goalAttributions(events: RecordEvent[], reverted: Set<string>) {
+  const attributions = new Map<string, RecordEvent>();
+  const ordered = [...events].sort((a, b) => a.stateVersion - b.stateVersion);
+  for (const event of ordered) {
+    if (
+      event.eventType === "goal_attributed" &&
+      event.relatedEventId &&
+      !reverted.has(event.id)
+    ) {
+      attributions.set(event.relatedEventId, event);
+    }
+  }
+  return attributions;
+}
+
+function applyGoalAttribution(goal: RecordEvent, attribution?: RecordEvent): RecordEvent {
+  if (!attribution) return goal;
+  return {
+    ...goal,
+    subjectSide: attribution.subjectSide ?? goal.subjectSide,
+    subjectTeamMemberId: attribution.subjectTeamMemberId ?? goal.subjectTeamMemberId,
+    subjectMatchRosterId: attribution.subjectMatchRosterId ?? goal.subjectMatchRosterId,
+    payload: { ...goal.payload, ...attribution.payload },
+  };
+}
+
 export function isEventReverted(eventId: string, events: RecordEvent[]): boolean {
   return revertedIds(events).has(eventId);
 }
@@ -107,6 +133,7 @@ function pushTeamTimeout(
 
 export function deriveMatchRecordSummary(events: RecordEvent[]): MatchRecordSummary {
   const reverted = revertedIds(events);
+  const attributions = goalAttributions(events, reverted);
   const summary: MatchRecordSummary = {
     participants: [],
     teamTimeouts: { home: [], away: [] },
@@ -114,15 +141,24 @@ export function deriveMatchRecordSummary(events: RecordEvent[]): MatchRecordSumm
   const participants = new Map<string, ParticipantRecordSummary>();
 
   const ordered = [...events].sort((a, b) => a.stateVersion - b.stateVersion);
-  for (const event of ordered) {
-    if (reverted.has(event.id)) continue;
-    if (event.eventType === "event_reverted" || event.eventType === "goal_reverted") continue;
-
-    if (event.eventType === "team_timeout" && event.subjectSide) {
-      pushTeamTimeout(summary, event.subjectSide, event);
+  for (const sourceEvent of ordered) {
+    if (reverted.has(sourceEvent.id)) continue;
+    if (
+      sourceEvent.eventType === "event_reverted" ||
+      sourceEvent.eventType === "goal_reverted" ||
+      sourceEvent.eventType === "goal_attributed"
+    ) {
       continue;
     }
 
+    if (sourceEvent.eventType === "team_timeout" && sourceEvent.subjectSide) {
+      pushTeamTimeout(summary, sourceEvent.subjectSide, sourceEvent);
+      continue;
+    }
+
+    const event = sourceEvent.eventType === "goal"
+      ? applyGoalAttribution(sourceEvent, attributions.get(sourceEvent.id))
+      : sourceEvent;
     const key = participantKey(event);
     if (!key) continue;
     let participant = participants.get(key);
