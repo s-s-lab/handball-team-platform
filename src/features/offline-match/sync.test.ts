@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { RecordEvent } from "@/features/match-records/types";
 import type { OfflineQueueItem } from "./types";
 import {
   advanceReplayQueue,
   buildReplayPlan,
+  removeQueuedOptimisticEvents,
   rebaseReplayQueue,
 } from "./sync";
 
@@ -21,6 +23,24 @@ function item(sequence: number, baseServerVersion = 7): OfflineQueueItem {
     },
     enqueuedAt: `2026-08-26T09:00:0${sequence}.000Z`,
     syncState: "pending",
+  };
+}
+
+function event(id: string, stateVersion: number): RecordEvent {
+  return {
+    id,
+    matchId: "match-1",
+    stateVersion,
+    eventType: "goal",
+    relatedEventId: null,
+    period: 1,
+    periodElapsedMs: 10_000,
+    competitionElapsedMs: 10_000,
+    subjectSide: "home",
+    subjectTeamMemberId: null,
+    subjectMatchRosterId: null,
+    payload: { side: "home" },
+    createdAt: "2026-08-26T09:00:00.000Z",
   };
 }
 
@@ -65,5 +85,12 @@ describe("offline replay planning", () => {
 
     expect(rebased.map((entry) => entry.baseServerVersion)).toEqual([8, 8]);
     expect(buildReplayPlan(8, rebased).state).toBe("ready");
+  });
+
+  it("removes optimistic events by queued client action id when conflict discard cannot refresh", () => {
+    const events = [event("server-event", 7), event("action-1", 8), event("action-2", 9)];
+    const kept = removeQueuedOptimisticEvents(events, [item(1), item(2)]);
+
+    expect(kept.map((entry) => entry.id)).toEqual(["server-event"]);
   });
 });
