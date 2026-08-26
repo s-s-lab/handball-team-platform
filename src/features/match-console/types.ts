@@ -6,6 +6,7 @@ export const CONSOLE_ACTIONS = [
   "reset_clock",
   "set_period",
   "goal",
+  "attribute_goal",
   "undo_last_goal",
   "seven_meter_missed",
   "warning",
