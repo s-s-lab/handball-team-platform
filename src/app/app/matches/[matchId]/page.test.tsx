@@ -20,6 +20,7 @@ vi.mock("@/features/matches/data", () => ({
     id: "11111111-1111-4111-8111-111111111111",
     teamId: "22222222-2222-4222-8222-222222222222",
     name: "記録確認試合",
+    competitionName: "関東学生リーグ",
     opponentName: "相手チーム",
     teamSide: "home",
     scheduledAt: "2026-08-26T09:00:00.000Z",
@@ -28,6 +29,10 @@ vi.mock("@/features/matches/data", () => ({
     isPublic: false,
     isLive: false,
     status: "finished",
+    completedAt: "2026-08-26T10:15:00.000Z",
+    resultSource: "console",
+    homeScore: 31,
+    awayScore: 28,
     rosterConfiguredAt: "2026-08-26T08:00:00.000Z",
     rules: {
       periodCount: 2,
@@ -67,12 +72,19 @@ vi.mock("@/features/match-records/data", () => ({
 import MatchPage from "./page";
 
 describe("Match detail record integration", () => {
-  it("renders the private post-match summary and timeline", async () => {
+  it("renders the final score, competition and private post-match record", async () => {
     const element = await MatchPage({
       params: Promise.resolve({ matchId: "11111111-1111-4111-8111-111111111111" }),
     });
     const html = renderToStaticMarkup(element);
+    const text = html.replace(/<[^>]+>/g, "");
 
+    expect(text).toContain("関東学生リーグ");
+    expect(text).toContain("FINAL");
+    expect(text).toContain("31");
+    expect(text).toContain("28");
+    expect(text).toContain("Match Console記録");
+    expect(html).toContain('/app/teams/22222222-2222-4222-8222-222222222222/matches');
     expect(html).toContain("試合記録");
     expect(html).toContain("選手別サマリー");
     expect(html).toContain("タイムライン");
