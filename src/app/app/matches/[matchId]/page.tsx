@@ -109,14 +109,16 @@ export default async function MatchPage({ params }: MatchPageProps) {
               <PencilLine aria-hidden="true" /> ロスターを編集
             </Link>
           </Button>
-          <Button disabled>
-            <TimerReset aria-hidden="true" /> MATCH CONSOLE
+          <Button asChild>
+            <Link href={`/app/matches/${match.id}/console`}>
+              <TimerReset aria-hidden="true" /> MATCH CONSOLE
+            </Link>
           </Button>
         </div>
       </section>
 
       <div className="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-6 text-muted-foreground">
-        MATCH CONSOLEは次のフェーズで接続します。この画面では試合設定とロスターの確定内容を確認できます。
+        MATCH CONSOLEではタイマー、ピリオド、得点、Undo、試合終了を操作できます。終了済みの試合は最終状態を確認できます。
       </div>
 
       <Card>
