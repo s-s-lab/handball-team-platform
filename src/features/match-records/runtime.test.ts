@@ -91,6 +91,34 @@ describe("match record runtime", () => {
     expect(player?.goalTimesMs).toEqual([123_000]);
   });
 
+  it("attributes an already-counted goal without changing the score event", () => {
+    const goal = event({
+      id: "goal-late-scorer",
+      stateVersion: 1,
+      eventType: "goal",
+      subjectTeamMemberId: null,
+      subjectMatchRosterId: null,
+      periodElapsedMs: 321_000,
+      competitionElapsedMs: 321_000,
+      payload: { side: "home", goal_method: "open_play" },
+    });
+    const attribution = event({
+      id: "goal-attribution",
+      stateVersion: 2,
+      eventType: "goal_attributed",
+      relatedEventId: goal.id,
+      subjectTeamMemberId: "00000000-0000-4000-8000-000000000077",
+      subjectMatchRosterId: "00000000-0000-4000-8000-000000000088",
+      payload: { shirt_number: 7, display_name: "鈴木" },
+    });
+
+    const summary = deriveMatchRecordSummary([goal, attribution]);
+    expect(summary.participants).toHaveLength(1);
+    expect(summary.participants[0]?.subjectMatchRosterId).toBe(attribution.subjectMatchRosterId);
+    expect(summary.participants[0]?.goals).toBe(1);
+    expect(summary.participants[0]?.goalTimesMs).toEqual([321_000]);
+  });
+
   it("excludes reverted events from aggregate totals while preserving reversal knowledge", () => {
     const goal = event({
       id: "goal-1",
