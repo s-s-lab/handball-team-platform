@@ -6,11 +6,20 @@ describe("mapConsoleActionDatabaseError", () => {
     expect(mapConsoleActionDatabaseError("22023", "Participant has already been warned")).toBe(
       "この選手にはすでに警告が記録されています。",
     );
-    expect(mapConsoleActionDatabaseError("22023", "Team timeout period limit reached")).toBe(
+    expect(mapConsoleActionDatabaseError("22023", "Team-timeout period limit has been reached")).toBe(
       "このピリオドで取得できるチームタイムアウトの上限に達しています。",
     );
-    expect(mapConsoleActionDatabaseError("22023", "Team timeout is not allowed in overtime")).toBe(
+    expect(mapConsoleActionDatabaseError("22023", "Team timeout is not available in overtime")).toBe(
       "延長戦ではチームタイムアウトを取得できません。",
+    );
+  });
+
+  it("maps goal-attribution conflicts without exposing database details", () => {
+    expect(mapConsoleActionDatabaseError("22023", "Goal already has scorer attribution")).toBe(
+      "この得点にはすでに得点者が記録されています。",
+    );
+    expect(mapConsoleActionDatabaseError("22023", "Managed-team goal attribution requires a match-roster participant")).toBe(
+      "自チームの得点者は試合ロスターから選択してください。",
     );
   });
 
