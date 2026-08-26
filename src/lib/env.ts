@@ -9,9 +9,17 @@ export type PublicEnv = {
   supabasePublishableKey: string;
 };
 
-export function getPublicEnv(source: PublicEnvSource = process.env): PublicEnv {
-  const supabaseUrl = source.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabasePublishableKey = source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+function inlinePublicEnvSource(): PublicEnvSource {
+  return {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+}
+
+export function getPublicEnv(source?: PublicEnvSource): PublicEnv {
+  const resolvedSource = source ?? inlinePublicEnvSource();
+  const supabaseUrl = resolvedSource.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabasePublishableKey = resolvedSource.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 
   if (!supabaseUrl) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is required.");

@@ -1,9 +1,14 @@
 "use server";
 
+import { listMatchRecordEvents } from "@/features/match-records/data";
+import type { RecordEvent } from "@/features/match-records/types";
 import { createClient } from "@/lib/supabase/server";
 import { mapConsoleSnapshot } from "./data";
-import type { ConsoleActionResult } from "./types";
+import { mapConsoleActionDatabaseError } from "./errors";
+import type { ConsoleActionResult, ConsoleSnapshot } from "./types";
 import { parseConsoleAction } from "./validation";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function latestSnapshot(matchId: string) {
   const supabase = await createClient();
@@ -12,6 +17,16 @@ async function latestSnapshot(matchId: string) {
   });
   if (error) return undefined;
   return mapConsoleSnapshot(data) ?? undefined;
+}
+
+export async function refreshConsoleSnapshot(matchId: string): Promise<ConsoleSnapshot | null> {
+  if (!UUID_PATTERN.test(matchId)) return null;
+  return (await latestSnapshot(matchId)) ?? null;
+}
+
+export async function refreshConsoleRecordEvents(matchId: string): Promise<RecordEvent[]> {
+  if (!UUID_PATTERN.test(matchId)) return [];
+  return listMatchRecordEvents(matchId);
 }
 
 export async function applyConsoleAction(formData: FormData): Promise<ConsoleActionResult> {
@@ -36,22 +51,16 @@ export async function applyConsoleAction(formData: FormData): Promise<ConsoleAct
       };
     }
 
-    if (error.code === "42501") {
-      return { ok: false, message: "この試合を操作する権限がありません。" };
-    }
-
+    const message = mapConsoleActionDatabaseError(error.code, error.message);
     if (error.code === "22023") {
       return {
         ok: false,
-        message: "この操作は現在の試合状態では実行できません。最新状態を確認してください。",
+        message,
         snapshot: await latestSnapshot(parsed.value.matchId),
       };
     }
 
-    return {
-      ok: false,
-      message: "試合状態を更新できませんでした。通信状態を確認してもう一度お試しください。",
-    };
+    return { ok: false, message };
   }
 
   const snapshot = mapConsoleSnapshot(data);

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { listMatchRecordEvents } from "@/features/match-records/data";
 import { getMatchForCurrentUser } from "@/features/matches/data";
 import { createClient } from "@/lib/supabase/server";
 import type { ConsoleMatchStatus, ConsoleSnapshot, MatchConsoleData } from "./types";
@@ -21,6 +22,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
   const version = finiteNumber(value.version);
   const currentPeriod = finiteNumber(value.current_period);
   const clockElapsedMs = finiteNumber(value.clock_elapsed_ms);
+  const competitionElapsedMs = finiteNumber(value.competition_elapsed_ms);
   const clockRunning = typeof value.clock_running === "boolean" ? value.clock_running : null;
   const clockStartedAt =
     value.clock_started_at === null || typeof value.clock_started_at === "string"
@@ -40,6 +42,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
     version === null ||
     currentPeriod === null ||
     clockElapsedMs === null ||
+    competitionElapsedMs === null ||
     clockRunning === null ||
     clockStartedAt === undefined ||
     homeScore === null ||
@@ -56,6 +59,7 @@ export function mapConsoleSnapshot(value: unknown): ConsoleSnapshot | null {
     version,
     currentPeriod,
     clockElapsedMs,
+    competitionElapsedMs,
     clockRunning,
     clockStartedAt,
     homeScore,
@@ -71,10 +75,12 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
   if (!match) return null;
 
   const supabase = await createClient();
-  const [{ data: team, error: teamError }, { data: rawSnapshot, error: snapshotError }] =
+  const recordEventsPromise = listMatchRecordEvents(matchId);
+  const [{ data: team, error: teamError }, { data: rawSnapshot, error: snapshotError }, recordEvents] =
     await Promise.all([
       supabase.from("teams").select("name").eq("id", match.teamId).maybeSingle(),
       supabase.rpc("get_match_console_snapshot", { p_match_id: matchId }),
+      recordEventsPromise,
     ]);
 
   if (teamError || snapshotError || !team) {
@@ -90,6 +96,7 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
     matchId: match.id,
     matchName: match.name,
     teamId: match.teamId,
+    managedSide: match.teamSide,
     homeName: teamIsHome ? team.name : match.opponentName,
     awayName: teamIsHome ? match.opponentName : team.name,
     rules: {
@@ -98,7 +105,18 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
       overtimeEnabled: match.rules.overtimeEnabled,
       overtimePeriodCount: match.rules.overtimePeriodCount,
       overtimePeriodSeconds: match.rules.overtimePeriodSeconds,
+      teamTimeoutsPerGame: match.rules.teamTimeoutsPerGame,
+      teamTimeoutsPerPeriod: match.rules.teamTimeoutsPerPeriod,
     },
+    participants: match.roster.map((participant) => ({
+      matchRosterId: participant.id,
+      teamMemberId: participant.teamMemberId,
+      kind: participant.kind,
+      displayName: participant.displayNameSnapshot?.trim() || participant.fullNameSnapshot,
+      shirtNumber: participant.shirtNumberSnapshot,
+      primaryPosition: participant.primaryPositionSnapshot,
+    })),
+    recordEvents,
     snapshot,
   };
 }
