@@ -15,6 +15,7 @@ import {
   type DashboardMatch,
   type TeamDashboardSummary,
 } from "@/features/team-dashboard/runtime";
+import { TEAM_EVENT_LABELS, type ScheduleEvent } from "@/features/schedule/types";
 
 type TeamDashboardProps = {
   team: {
@@ -27,6 +28,7 @@ type TeamDashboardProps = {
   };
   isAdmin: boolean;
   summary: TeamDashboardSummary;
+  nextActivity?: ScheduleEvent | null;
 };
 
 function formatJapanDateTime(value: string) {
@@ -53,7 +55,49 @@ function resultLabel(match: DashboardMatch) {
   return "DRAW";
 }
 
-export function NextEventCard({ match }: { match: DashboardMatch | null }) {
+export function NextEventCard({
+  teamId,
+  event,
+  match,
+}: {
+  teamId?: string;
+  event?: ScheduleEvent | null;
+  match: DashboardMatch | null;
+}) {
+  if (event) {
+    const href = event.linkedMatchId
+      ? `/app/matches/${event.linkedMatchId}`
+      : `/app/teams/${teamId ?? event.teamId}/schedule`;
+    return (
+      <section className="border-t border-border/80 pt-5" aria-labelledby="next-event-heading">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="size-4 text-[var(--workspace-accent)]" aria-hidden="true" />
+            <h2 id="next-event-heading" className="text-sm font-black tracking-wide">次の予定</h2>
+          </div>
+          <span className="text-xs font-black tracking-[0.14em] text-muted-foreground">
+            {TEAM_EVENT_LABELS[event.eventType]}
+          </span>
+        </div>
+        <Link href={href} className="group mt-4 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <p className="text-xs font-bold text-muted-foreground">{formatJapanDateTime(event.startsAt)}</p>
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate text-xl font-black tracking-tight">{event.title}</p>
+              <p className="mt-1 truncate text-sm text-muted-foreground">{TEAM_EVENT_LABELS[event.eventType]}</p>
+            </div>
+            <ArrowRight className="mb-1 size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" aria-hidden="true" />
+          </div>
+          {event.venue ? (
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3.5" aria-hidden="true" /> {event.venue}
+            </p>
+          ) : null}
+        </Link>
+      </section>
+    );
+  }
+
   return (
     <section className="border-t border-border/80 pt-5" aria-labelledby="next-match-heading">
       <div className="flex items-center justify-between gap-3">
@@ -184,7 +228,7 @@ export function ScoringLeaders({ summary }: { summary: TeamDashboardSummary }) {
   );
 }
 
-export function TeamDashboard({ team, isAdmin, summary }: TeamDashboardProps) {
+export function TeamDashboard({ team, isAdmin, summary, nextActivity }: TeamDashboardProps) {
   return (
     <div className="space-y-7">
       <section className="relative overflow-hidden bg-[var(--workspace-ink)] px-5 py-6 text-white md:px-8 md:py-8">
@@ -203,10 +247,10 @@ export function TeamDashboard({ team, isAdmin, summary }: TeamDashboardProps) {
           {isAdmin ? (
             <div className="flex flex-wrap gap-2">
               <Button asChild size="lg" className="bg-[var(--workspace-accent)] text-[var(--workspace-ink)] hover:opacity-90">
-                <Link href={`/app/teams/${team.id}/matches/new`}><Plus aria-hidden="true" /> 試合を作成</Link>
+                <Link href={`/app/teams/${team.id}/schedule/new`}><Plus aria-hidden="true" /> 予定を追加</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white">
-                <Link href={`/app/teams/${team.id}/members/new`}><UserPlus aria-hidden="true" /> メンバー追加</Link>
+                <Link href={`/app/teams/${team.id}/matches/new`}><CalendarDays aria-hidden="true" /> 試合を作成</Link>
               </Button>
             </div>
           ) : null}
@@ -214,7 +258,7 @@ export function TeamDashboard({ team, isAdmin, summary }: TeamDashboardProps) {
       </section>
 
       <div className="grid gap-7 lg:grid-cols-2">
-        <NextEventCard match={summary.nextMatch} />
+        <NextEventCard teamId={team.id} event={nextActivity} match={summary.nextMatch} />
         <RecentResultCard match={summary.latestResult} />
       </div>
 
@@ -256,11 +300,12 @@ export function TeamDashboard({ team, isAdmin, summary }: TeamDashboardProps) {
         <section className="flex flex-col gap-4 border-y border-border/80 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-black">チーム運営を更新</p>
-            <p className="mt-1 text-sm text-muted-foreground">試合とメンバーはここからすぐ追加できます。</p>
+            <p className="mt-1 text-sm text-muted-foreground">予定・試合・メンバーをここからすぐ追加できます。</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline"><Link href={`/app/teams/${team.id}/schedule/new`}><Plus aria-hidden="true" /> 予定</Link></Button>
             <Button asChild variant="outline"><Link href={`/app/teams/${team.id}/matches/new`}><CalendarDays aria-hidden="true" /> 試合</Link></Button>
-            <Button asChild variant="outline"><Link href={`/app/teams/${team.id}/members/new`}><UsersRound aria-hidden="true" /> メンバー</Link></Button>
+            <Button asChild variant="outline"><Link href={`/app/teams/${team.id}/members/new`}><UserPlus aria-hidden="true" /> メンバー</Link></Button>
           </div>
         </section>
       ) : null}
