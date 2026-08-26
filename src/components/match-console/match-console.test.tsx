@@ -4,6 +4,8 @@ import type { MatchConsoleData } from "@/features/match-console/types";
 
 vi.mock("@/features/match-console/actions", () => ({
   applyConsoleAction: async () => ({ ok: false, message: "not used in static render" }),
+  refreshConsoleRecordEvents: async () => [],
+  refreshConsoleSnapshot: async () => null,
 }));
 
 import { MatchConsole } from "./match-console";
@@ -21,6 +23,8 @@ const data: MatchConsoleData = {
     overtimeEnabled: true,
     overtimePeriodCount: 2,
     overtimePeriodSeconds: 300,
+    teamTimeoutsPerGame: 3,
+    teamTimeoutsPerPeriod: 2,
   },
   participants: [
     {
