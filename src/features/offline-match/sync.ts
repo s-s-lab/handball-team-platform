@@ -1,3 +1,4 @@
+import type { RecordEvent } from "@/features/match-records/types";
 import type { OfflineQueueItem } from "./types";
 
 export type ReplayStep = {
@@ -65,4 +66,13 @@ export function rebaseReplayQueue(
       baseServerVersion,
       syncState: item.syncState === "failed" ? "failed" as const : "pending" as const,
     }));
+}
+
+export function removeQueuedOptimisticEvents(
+  events: RecordEvent[],
+  queue: OfflineQueueItem[],
+): RecordEvent[] {
+  if (!queue.length) return [...events];
+  const optimisticIds = new Set(queue.map((item) => item.clientActionId));
+  return events.filter((event) => !optimisticIds.has(event.id));
 }
