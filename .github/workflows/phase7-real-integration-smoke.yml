@@ -16,82 +16,45 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://ecvdqvekhfpctgqpawha.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_2m6y1TrEnDGjmUkbR3gq0Q_6ieJCdZP
       INTEGRATION_MATCH_ID: 70000000-0000-4000-8000-000000000003
+      TEMP_EMAIL: phase7-integration-smoke-700000000009@gmail.com
+      TEMP_PASSWORD: Phase7Smoke!700000000009
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Mask temporary test credential
+        run: echo "::add-mask::$TEMP_PASSWORD"
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Install browser runner
         run: npm install --no-save --no-audit --no-fund @playwright/test@1.55.0
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Create temporary Supabase user
+      - name: Verify temporary user and fixture authorization
         shell: bash
         run: |
           node --input-type=module <<'NODE'
-          import { appendFileSync } from "node:fs";
-          import { randomBytes } from "node:crypto";
           import { createClient } from "@supabase/supabase-js";
-
-          const email = `phase7-integration-${process.env.GITHUB_RUN_ID}@example.com`;
-          const password = `Q7!${randomBytes(24).toString("base64url")}`;
-          console.log(`::add-mask::${password}`);
 
           const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
             { auth: { persistSession: false, autoRefreshToken: false } },
           );
-          const { data, error } = await supabase.auth.signUp({ email, password });
+          const { error: authError } = await supabase.auth.signInWithPassword({
+            email: process.env.TEMP_EMAIL,
+            password: process.env.TEMP_PASSWORD,
+          });
+          if (authError) throw authError;
+
+          const { data, error } = await supabase.rpc("get_match_console_snapshot", {
+            p_match_id: process.env.INTEGRATION_MATCH_ID,
+          });
           if (error) throw error;
-          if (!data.user?.id) throw new Error("Temporary Supabase user was not created.");
-
-          appendFileSync(process.env.GITHUB_ENV, `TEMP_EMAIL=${email}\nTEMP_PASSWORD=${password}\nTEMP_USER_ID=${data.user.id}\n`);
-          console.log(`TEMP_EMAIL=${email}`);
-          console.log(`TEMP_USER_ID=${data.user.id}`);
-          console.log(`TEMP_SESSION_CREATED=${Boolean(data.session)}`);
-          NODE
-      - name: Wait for temporary user confirmation and fixture authorization
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import { createClient } from "@supabase/supabase-js";
-
-          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-            { auth: { persistSession: false, autoRefreshToken: false } },
-          );
-
-          let lastAuthError = "not attempted";
-          let lastFixtureError = "not attempted";
-          for (let attempt = 1; attempt <= 90; attempt += 1) {
-            const { error: authError } = await supabase.auth.signInWithPassword({
-              email: process.env.TEMP_EMAIL,
-              password: process.env.TEMP_PASSWORD,
-            });
-            if (authError) {
-              lastAuthError = authError.message;
-              await sleep(2000);
-              continue;
-            }
-
-            const { data, error } = await supabase.rpc("get_match_console_snapshot", {
-              p_match_id: process.env.INTEGRATION_MATCH_ID,
-            });
-            if (!error && data) {
-              console.log(`INTEGRATION_FIXTURE_READY attempt=${attempt}`);
-              process.exit(0);
-            }
-            lastFixtureError = error?.message ?? "snapshot unavailable";
-            await sleep(2000);
-          }
-
-          throw new Error(`Integration fixture was not authorized. auth=${lastAuthError}; fixture=${lastFixtureError}`);
+          if (!data) throw new Error("Integration fixture snapshot is unavailable.");
+          console.log("INTEGRATION_FIXTURE_AUTHORIZED");
           NODE
       - name: Production build against real Supabase
         run: npm run build
