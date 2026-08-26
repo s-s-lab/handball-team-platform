@@ -108,7 +108,7 @@ export function parseConsoleAction(formData: FormData): ParseResult<ConsoleActio
     return fail("対象チームが正しくありません。");
   }
 
-  if (["goal", "seven_meter_missed", "warning", "suspension", "disqualification"].includes(action)) {
+  if (["goal", "attribute_goal", "seven_meter_missed", "warning", "suspension", "disqualification"].includes(action)) {
     const participant = addParticipantFields(formData, payload);
     if (!participant.ok) return fail(participant.message);
   }
@@ -140,15 +140,19 @@ export function parseConsoleAction(formData: FormData): ParseResult<ConsoleActio
     payload.report_required = true;
   }
 
-  if (action === "revert_event") {
+  if (action === "revert_event" || action === "attribute_goal") {
     const targetEventId = text(formData, "targetEventId");
-    if (!UUID_PATTERN.test(targetEventId)) return fail("訂正対象の記録が正しくありません。");
+    if (!UUID_PATTERN.test(targetEventId)) return fail("対象の記録が正しくありません。");
     payload.target_event_id = targetEventId;
 
-    const reason = text(formData, "reason");
-    if (reason) {
-      if (reason.length > 200) return fail("訂正理由は200文字以内で入力してください。");
-      payload.reason = reason;
+    if (action === "revert_event") {
+      const reason = text(formData, "reason");
+      if (reason) {
+        if (reason.length > 200) return fail("訂正理由は200文字以内で入力してください。");
+        payload.reason = reason;
+      }
+    } else if (!hasParticipant(payload)) {
+      return fail("得点者を指定してください。");
     }
   }
 
