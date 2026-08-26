@@ -2,6 +2,7 @@ export const MATCH_SIDES = ["home", "away"] as const;
 export type TeamSide = (typeof MATCH_SIDES)[number];
 
 export type MatchStatus = "scheduled" | "live" | "finished" | "cancelled";
+export type MatchResultSource = "console" | "manual";
 
 export type MatchRulesInput = {
   periodCount: number;
@@ -61,6 +62,11 @@ export type MatchRosterRecord = {
 
 export type MatchRecord = MatchListItem & {
   memo: string | null;
+  competitionName: string | null;
+  completedAt: string | null;
+  resultSource: MatchResultSource;
+  homeScore: number;
+  awayScore: number;
   rules: MatchRulesRecord;
   roster: MatchRosterRecord[];
 };
