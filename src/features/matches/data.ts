@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   MatchListItem,
   MatchRecord,
+  MatchResultSource,
   MatchRosterCandidate,
   MatchRosterRecord,
   MatchRosterSelection,
@@ -44,7 +45,7 @@ export async function getMatchForCurrentUser(matchId: string): Promise<MatchReco
   const { data: match, error: matchError } = await supabase
     .from("matches")
     .select(
-      "id, team_id, name, opponent_name, team_side, scheduled_at, venue, memo, status, is_public",
+      "id, team_id, name, competition_name, opponent_name, team_side, scheduled_at, venue, memo, status, is_public, completed_at, result_source",
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -52,27 +53,35 @@ export async function getMatchForCurrentUser(matchId: string): Promise<MatchReco
   if (matchError) throw databaseReadFailure();
   if (!match) return null;
 
-  const [{ data: rules, error: rulesError }, { data: roster, error: rosterError }] =
-    await Promise.all([
-      supabase
-        .from("match_rules")
-        .select(
-          "match_id, period_count, period_seconds, halftime_seconds, overtime_enabled, overtime_period_count, overtime_period_seconds, team_timeouts_per_game, team_timeouts_per_period, team_timeout_seconds",
-        )
-        .eq("match_id", matchId)
-        .maybeSingle(),
-      supabase
-        .from("match_rosters")
-        .select(
-          "id, match_id, team_member_id, kind, full_name_snapshot, display_name_snapshot, shirt_number_snapshot, primary_position_snapshot",
-        )
-        .eq("match_id", matchId)
-        .order("kind")
-        .order("shirt_number_snapshot", { nullsFirst: false })
-        .order("full_name_snapshot"),
-    ]);
+  const [
+    { data: rules, error: rulesError },
+    { data: roster, error: rosterError },
+    { data: state, error: stateError },
+  ] = await Promise.all([
+    supabase
+      .from("match_rules")
+      .select(
+        "match_id, period_count, period_seconds, halftime_seconds, overtime_enabled, overtime_period_count, overtime_period_seconds, team_timeouts_per_game, team_timeouts_per_period, team_timeout_seconds",
+      )
+      .eq("match_id", matchId)
+      .maybeSingle(),
+    supabase
+      .from("match_rosters")
+      .select(
+        "id, match_id, team_member_id, kind, full_name_snapshot, display_name_snapshot, shirt_number_snapshot, primary_position_snapshot",
+      )
+      .eq("match_id", matchId)
+      .order("kind")
+      .order("shirt_number_snapshot", { nullsFirst: false })
+      .order("full_name_snapshot"),
+    supabase
+      .from("match_state")
+      .select("home_score, away_score")
+      .eq("match_id", matchId)
+      .maybeSingle(),
+  ]);
 
-  if (rulesError || rosterError) throw databaseReadFailure();
+  if (rulesError || rosterError || stateError) throw databaseReadFailure();
   if (!rules) return null;
 
   const mappedRules: MatchRulesRecord = {
@@ -103,6 +112,7 @@ export async function getMatchForCurrentUser(matchId: string): Promise<MatchReco
     id: match.id,
     teamId: match.team_id,
     name: match.name,
+    competitionName: match.competition_name,
     opponentName: match.opponent_name,
     teamSide: match.team_side as TeamSide,
     scheduledAt: match.scheduled_at,
@@ -110,6 +120,10 @@ export async function getMatchForCurrentUser(matchId: string): Promise<MatchReco
     memo: match.memo,
     status: match.status as MatchStatus,
     isPublic: match.is_public,
+    completedAt: match.completed_at,
+    resultSource: match.result_source as MatchResultSource,
+    homeScore: state?.home_score ?? 0,
+    awayScore: state?.away_score ?? 0,
     rules: mappedRules,
     roster: mappedRoster,
   };
