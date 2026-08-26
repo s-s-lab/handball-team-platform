@@ -6,6 +6,7 @@ import { TeamDashboard } from "@/components/team-dashboard/team-dashboard";
 import { RosterList } from "@/components/team-core/roster-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { listUpcomingTeamEvents } from "@/features/schedule/data";
 import { getTeamDashboardSummary } from "@/features/team-dashboard/data";
 import { buildDashboardSummary } from "@/features/team-dashboard/runtime";
 import { updateTeamVisibility } from "@/features/team-core/actions";
@@ -23,14 +24,21 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
 
   const isAdmin = team.role === "admin";
   const activeMemberCount = team.roster.filter((member) => member.isActive).length;
-  const summary = team.role
-    ? await getTeamDashboardSummary(team.id, activeMemberCount)
-    : buildDashboardSummary({
-        now: new Date(),
-        activeMemberCount,
-        matches: [],
-        scorers: [],
-      });
+  const now = new Date();
+  const [summary, upcomingEvents] = team.role
+    ? await Promise.all([
+        getTeamDashboardSummary(team.id, activeMemberCount),
+        listUpcomingTeamEvents(team.id, now.toISOString(), 1),
+      ])
+    : [
+        buildDashboardSummary({
+          now,
+          activeMemberCount,
+          matches: [],
+          scorers: [],
+        }),
+        [],
+      ];
 
   return (
     <main className="flex flex-col gap-8">
@@ -54,6 +62,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         }}
         isAdmin={isAdmin}
         summary={summary}
+        nextActivity={upcomingEvents[0] ?? null}
       />
 
       <section className="border-t border-border/80 pt-6" aria-labelledby="team-members-heading">
