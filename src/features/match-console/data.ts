@@ -91,9 +91,6 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
   if (!snapshot) throw new Error("試合状態を読み込めませんでした。");
 
   const teamIsHome = match.teamSide === "home";
-  const recentEvents = [...recordEvents]
-    .sort((a, b) => b.stateVersion - a.stateVersion)
-    .slice(0, 12);
 
   return {
     matchId: match.id,
@@ -117,7 +114,7 @@ export async function getMatchConsoleForCurrentUser(matchId: string): Promise<Ma
       shirtNumber: participant.shirtNumberSnapshot,
       primaryPosition: participant.primaryPositionSnapshot,
     })),
-    recentEvents,
+    recordEvents,
     snapshot,
   };
 }
