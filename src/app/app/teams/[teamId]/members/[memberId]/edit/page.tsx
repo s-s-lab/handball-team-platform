@@ -22,8 +22,8 @@ export default async function EditMemberPage({ params, searchParams }: EditMembe
   return (
     <main className="max-w-2xl">
       <Button asChild variant="ghost" size="sm" className="-ml-3 mb-5">
-        <Link href={`/app/teams/${team.id}`}>
-          <ArrowLeft aria-hidden="true" /> チームへ戻る
+        <Link href={`/app/teams/${team.id}/members/${member.id}`}>
+          <ArrowLeft aria-hidden="true" /> プロフィールへ戻る
         </Link>
       </Button>
 
