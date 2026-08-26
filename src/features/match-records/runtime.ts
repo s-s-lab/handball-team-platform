@@ -79,9 +79,9 @@ function participantKey(event: RecordEvent): string | null {
 
 function createParticipant(event: RecordEvent): ParticipantRecordSummary {
   return {
-    side: event.subjectSide,
-    teamMemberId: event.subjectTeamMemberId,
-    matchRosterId: event.subjectMatchRosterId,
+    subjectSide: event.subjectSide,
+    subjectTeamMemberId: event.subjectTeamMemberId,
+    subjectMatchRosterId: event.subjectMatchRosterId,
     shirtNumber: numberPayload(event.payload, "shirt_number"),
     displayName: stringPayload(event.payload, "display_name"),
     goals: 0,
