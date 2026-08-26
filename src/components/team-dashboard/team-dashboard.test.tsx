@@ -51,14 +51,15 @@ describe("TeamDashboard", () => {
         },
       }),
     );
+    const text = html.replace(/<[^>]+>/g, "");
 
-    expect(html).toContain("青山ハンドボールクラブ");
-    expect(html).toContain("次の試合");
-    expect(html).toContain("直近の結果");
-    expect(html).toContain("4勝");
-    expect(html).toContain("18");
-    expect(html).toContain("得点ランキング");
-    expect(html).toContain("31");
+    expect(text).toContain("青山ハンドボールクラブ");
+    expect(text).toContain("次の試合");
+    expect(text).toContain("直近の結果");
+    expect(text).toContain("4勝");
+    expect(text).toContain("18");
+    expect(text).toContain("得点ランキング");
+    expect(text).toContain("31");
     expect(html).toContain(`/app/teams/team-1/matches/new`);
     expect(html).toContain(`/app/teams/team-1/members/new`);
   });
