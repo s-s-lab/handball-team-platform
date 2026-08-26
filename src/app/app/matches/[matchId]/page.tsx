@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, MapPin, PencilLine, TimerReset } from "lucide-react";
 import { notFound } from "next/navigation";
+import { MatchRecordSummary } from "@/components/matches/match-record-summary";
+import { MatchRecordTimeline } from "@/components/matches/match-record-timeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { listMatchRecordEvents } from "@/features/match-records/data";
 import { getMatchForCurrentUser } from "@/features/matches/data";
 import type { MatchRosterRecord, MatchStatus } from "@/features/matches/types";
 
@@ -71,9 +74,12 @@ export default async function MatchPage({ params }: MatchPageProps) {
   const match = await getMatchForCurrentUser(matchId);
   if (!match) notFound();
 
+  const recordEvents = await listMatchRecordEvents(matchId);
   const players = match.roster.filter((member) => member.kind === "player");
   const staff = match.roster.filter((member) => member.kind === "staff");
   const rules = match.rules;
+  const homeName = match.teamSide === "home" ? "自チーム" : match.opponentName;
+  const awayName = match.teamSide === "away" ? "自チーム" : match.opponentName;
 
   return (
     <main className="flex max-w-5xl flex-col gap-6">
@@ -118,7 +124,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
       </section>
 
       <div className="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-6 text-muted-foreground">
-        MATCH CONSOLEではタイマー、ピリオド、得点、Undo、試合終了を操作できます。終了済みの試合は最終状態を確認できます。
+        MATCH CONSOLEではタイマー・得点に加えて、7m、警告、2分間退場、失格、チームタイムアウトを公式経過時刻とともに記録できます。保存された履歴は下の「試合記録」から振り返れます。
       </div>
 
       <Card>
@@ -152,6 +158,28 @@ export default async function MatchPage({ params }: MatchPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      <section className="flex flex-col gap-4" aria-labelledby="match-record-heading">
+        <div>
+          <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground">MATCH RECORD</p>
+          <h2 id="match-record-heading" className="mt-1 text-2xl font-black tracking-tight">試合記録</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            MATCH CONSOLEで入力した記録を、集計と時系列の両方から確認できます。訂正した記録も履歴として保持します。
+          </p>
+        </div>
+        <MatchRecordSummary
+          events={recordEvents}
+          homeName={homeName}
+          awayName={awayName}
+          periodCount={rules.periodCount}
+        />
+        <MatchRecordTimeline
+          events={recordEvents}
+          homeName={homeName}
+          awayName={awayName}
+          periodCount={rules.periodCount}
+        />
+      </section>
 
       <Card>
         <CardHeader>
