@@ -25,10 +25,3 @@ create index if not exists match_events_match_subject_roster_idx
 
 create index if not exists match_events_match_subject_member_idx
   on public.match_events(match_id, subject_team_member_id, event_type, state_version);
-
--- One correction per source event across the legacy goal-specific reversal and
--- the generalized Phase 7 event reversal.
-drop index if exists public.match_events_goal_revert_once_idx;
-create unique index match_events_revert_once_idx
-  on public.match_events(related_event_id)
-  where event_type in ('goal_reverted', 'event_reverted') and related_event_id is not null;
