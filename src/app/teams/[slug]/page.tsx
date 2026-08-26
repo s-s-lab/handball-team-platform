@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
+import { PublicMatchList } from "@/components/public-live/public-match-list";
 import { Brand } from "@/components/site/brand";
 import { Button } from "@/components/ui/button";
+import { getPublicTeamMatches } from "@/features/public-live/data";
 import { getPublicTeamBySlug, getPublicTeamMembers } from "@/features/team-core/public-data";
 
 type PublicTeamPageProps = {
@@ -14,7 +16,10 @@ export default async function PublicTeamPage({ params }: PublicTeamPageProps) {
   const team = await getPublicTeamBySlug(slug);
   if (!team) notFound();
 
-  const members = await getPublicTeamMembers(team.id);
+  const [members, matches] = await Promise.all([
+    getPublicTeamMembers(team.id),
+    getPublicTeamMatches(team.id),
+  ]);
   const players = members.filter((member) => member.kind === "player");
   const staff = members.filter((member) => member.kind === "staff");
 
@@ -48,6 +53,16 @@ export default async function PublicTeamPage({ params }: PublicTeamPageProps) {
             </p>
           ) : null}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-5 pt-10 md:px-8 md:pt-14">
+        <div className="mb-7">
+          <h2 className="text-2xl font-black tracking-tight">試合</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            公開設定された試合のLIVEスコア、今後の予定、最近の結果を確認できます。
+          </p>
+        </div>
+        <PublicMatchList matches={matches} />
       </section>
 
       <section className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-14">
