@@ -7,6 +7,7 @@ const EVENT_TYPES = new Set<RecordEventType>([
   "clock_reset",
   "period_changed",
   "goal",
+  "goal_attributed",
   "goal_reverted",
   "match_finished",
   "seven_meter_missed",
