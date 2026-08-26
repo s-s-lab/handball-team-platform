@@ -1,3 +1,5 @@
+import type { RecordEvent } from "@/features/match-records/types";
+
 export const CONSOLE_ACTIONS = [
   "start_clock",
   "stop_clock",
@@ -16,6 +18,7 @@ export const CONSOLE_ACTIONS = [
 
 export type ConsoleActionName = (typeof CONSOLE_ACTIONS)[number];
 export type ConsoleMatchStatus = "scheduled" | "live" | "finished" | "cancelled";
+export type ConsoleTeamSide = "home" | "away";
 
 export type ConsoleSnapshot = {
   matchId: string;
@@ -40,6 +43,15 @@ export type ConsoleRules = {
   overtimePeriodSeconds: number;
 };
 
+export type ConsoleParticipant = {
+  matchRosterId: string;
+  teamMemberId: string | null;
+  kind: "player" | "staff";
+  displayName: string;
+  shirtNumber: number | null;
+  primaryPosition: "GK" | "LW" | "LB" | "CB" | "RB" | "RW" | "PV" | null;
+};
+
 export type ConsoleActionPayload = Record<string, string | number | boolean>;
 
 export type ConsoleActionInput = {
@@ -54,9 +66,12 @@ export type MatchConsoleData = {
   matchId: string;
   matchName: string;
   teamId: string;
+  managedSide: ConsoleTeamSide;
   homeName: string;
   awayName: string;
   rules: ConsoleRules;
+  participants: ConsoleParticipant[];
+  recentEvents: RecordEvent[];
   snapshot: ConsoleSnapshot;
 };
 
