@@ -5,6 +5,12 @@ export const CONSOLE_ACTIONS = [
   "set_period",
   "goal",
   "undo_last_goal",
+  "seven_meter_missed",
+  "warning",
+  "suspension",
+  "disqualification",
+  "team_timeout",
+  "revert_event",
   "finish_match",
 ] as const;
 
@@ -16,6 +22,7 @@ export type ConsoleSnapshot = {
   version: number;
   currentPeriod: number;
   clockElapsedMs: number;
+  competitionElapsedMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
   homeScore: number;
@@ -33,12 +40,14 @@ export type ConsoleRules = {
   overtimePeriodSeconds: number;
 };
 
+export type ConsoleActionPayload = Record<string, string | number | boolean>;
+
 export type ConsoleActionInput = {
   matchId: string;
   clientActionId: string;
   expectedVersion: number;
   action: ConsoleActionName;
-  payload: Record<string, string | number>;
+  payload: ConsoleActionPayload;
 };
 
 export type MatchConsoleData = {
