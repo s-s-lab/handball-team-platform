@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const QA_PATH = "/__browser-qa__";
+const QA_PATH = "/browser-qa";
 const MATCH_ID = "00000000-0000-4000-8000-000000000007";
 const OFFLINE_DB_NAME = "handball-match-console";
 const OFFLINE_STORES = [

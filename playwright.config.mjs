@@ -18,7 +18,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run start",
-    url: "http://127.0.0.1:3000/__browser-qa__",
+    url: "http://127.0.0.1:3000/browser-qa",
     reuseExistingServer: false,
     timeout: 120_000,
   },
