@@ -3,6 +3,7 @@ import type { OfflineQueueItem } from "./types";
 import {
   advanceReplayQueue,
   buildReplayPlan,
+  rebaseReplayQueue,
 } from "./sync";
 
 function item(sequence: number, baseServerVersion = 7): OfflineQueueItem {
@@ -56,5 +57,13 @@ describe("offline replay planning", () => {
     expect(afterFailure).toHaveLength(2);
     expect(afterFailure[0]?.syncState).toBe("failed");
     expect(afterFailure[1]?.syncState).toBe("pending");
+  });
+
+  it("rebases remaining items after a partial successful replay", () => {
+    const remaining = advanceReplayQueue([item(1), item(2), item(3)], "action-1", "accepted");
+    const rebased = rebaseReplayQueue(remaining, 8);
+
+    expect(rebased.map((entry) => entry.baseServerVersion)).toEqual([8, 8]);
+    expect(buildReplayPlan(8, rebased).state).toBe("ready");
   });
 });
