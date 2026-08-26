@@ -82,8 +82,9 @@ export async function createTeamMember(formData: FormData) {
   if (error) redirect(errorPath(path, teamCoreErrorMessage(error)));
 
   revalidatePath(`/app/teams/${parsed.value.teamId}`);
+  revalidatePath(`/app/teams/${parsed.value.teamId}/members`);
   revalidatePath("/teams/[slug]", "page");
-  redirect(`/app/teams/${parsed.value.teamId}`);
+  redirect(`/app/teams/${parsed.value.teamId}/members`);
 }
 
 export async function updateTeamMember(formData: FormData) {
@@ -113,8 +114,10 @@ export async function updateTeamMember(formData: FormData) {
   if (error) redirect(errorPath(path, teamCoreErrorMessage(error)));
 
   revalidatePath(`/app/teams/${parsed.value.teamId}`);
+  revalidatePath(`/app/teams/${parsed.value.teamId}/members`);
+  revalidatePath(`/app/teams/${parsed.value.teamId}/members/${memberId}`);
   revalidatePath("/teams/[slug]", "page");
-  redirect(`/app/teams/${parsed.value.teamId}`);
+  redirect(`/app/teams/${parsed.value.teamId}/members/${memberId}`);
 }
 
 export async function updateTeamVisibility(formData: FormData) {
@@ -151,10 +154,12 @@ export async function updateTeamMemberVisibility(formData: FormData) {
     .eq("team_id", teamId);
 
   if (error) {
-    redirect(errorPath(`/app/teams/${teamId}`, teamCoreErrorMessage(error)));
+    redirect(errorPath(`/app/teams/${teamId}/members/${memberId}`, teamCoreErrorMessage(error)));
   }
 
   revalidatePath(`/app/teams/${teamId}`);
+  revalidatePath(`/app/teams/${teamId}/members`);
+  revalidatePath(`/app/teams/${teamId}/members/${memberId}`);
   revalidatePath("/teams/[slug]", "page");
-  redirect(`/app/teams/${teamId}`);
+  redirect(`/app/teams/${teamId}/members/${memberId}`);
 }
