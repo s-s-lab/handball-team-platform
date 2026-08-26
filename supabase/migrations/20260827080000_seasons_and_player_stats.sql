@@ -270,16 +270,16 @@ begin
   select
     p_season_id,
     r.team_member_id,
-    greatest(coalesce(r.appearances, 0), 0),
-    greatest(coalesce(r.starts, 0), 0),
-    greatest(coalesce(r.goals, 0), 0),
-    greatest(coalesce(r.seven_meter_goals, 0), 0),
-    greatest(coalesce(r.seven_meter_attempts, 0), 0),
-    greatest(coalesce(r.warnings, 0), 0),
-    greatest(coalesce(r.two_minute_suspensions, 0), 0),
-    greatest(coalesce(r.disqualifications, 0), 0),
-    greatest(coalesce(r.saves, 0), 0),
-    greatest(coalesce(r.shots_faced, 0), 0),
+    coalesce(r.appearances, 0),
+    coalesce(r.starts, 0),
+    coalesce(r.goals, 0),
+    coalesce(r.seven_meter_goals, 0),
+    coalesce(r.seven_meter_attempts, 0),
+    coalesce(r.warnings, 0),
+    coalesce(r.two_minute_suspensions, 0),
+    coalesce(r.disqualifications, 0),
+    coalesce(r.saves, 0),
+    coalesce(r.shots_faced, 0),
     nullif(r.notes, ''),
     auth.uid()
   from jsonb_to_recordset(coalesce(p_rows, '[]'::jsonb)) as r(
@@ -331,15 +331,15 @@ $$;
 
 revoke all on function private.save_season_internal(uuid, uuid, text, date, date, boolean) from public;
 revoke all on function private.save_season_internal(uuid, uuid, text, date, date, boolean) from anon;
-revoke all on function private.save_season_internal(uuid, uuid, text, date, date, boolean) from authenticated;
+grant execute on function private.save_season_internal(uuid, uuid, text, date, date, boolean) to authenticated;
 
 revoke all on function private.set_match_season_internal(uuid, uuid, uuid) from public;
 revoke all on function private.set_match_season_internal(uuid, uuid, uuid) from anon;
-revoke all on function private.set_match_season_internal(uuid, uuid, uuid) from authenticated;
+grant execute on function private.set_match_season_internal(uuid, uuid, uuid) to authenticated;
 
 revoke all on function private.upsert_season_player_stats_internal(uuid, uuid, jsonb) from public;
 revoke all on function private.upsert_season_player_stats_internal(uuid, uuid, jsonb) from anon;
-revoke all on function private.upsert_season_player_stats_internal(uuid, uuid, jsonb) from authenticated;
+grant execute on function private.upsert_season_player_stats_internal(uuid, uuid, jsonb) to authenticated;
 
 revoke all on function public.save_season(uuid, uuid, text, date, date, boolean) from public;
 revoke all on function public.save_season(uuid, uuid, text, date, date, boolean) from anon;
