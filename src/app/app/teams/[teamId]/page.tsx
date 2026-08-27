@@ -50,6 +50,16 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         </div>
       ) : null}
 
+      {summary.currentSeasonName ? (
+        <Link
+          href={`/app/teams/${team.id}/stats`}
+          className="flex min-h-11 items-center justify-between gap-3 border-l-4 border-[var(--workspace-accent)] bg-card px-4 py-3 text-sm font-bold shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span><span className="mr-2 text-xs font-black tracking-[0.14em] text-muted-foreground">CURRENT SEASON</span>{summary.currentSeasonName}</span>
+          <span className="text-xs text-muted-foreground">成績を見る →</span>
+        </Link>
+      ) : null}
+
       <TeamDashboard
         team={{
           id: team.id,
