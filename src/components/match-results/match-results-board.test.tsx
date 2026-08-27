@@ -21,6 +21,8 @@ const matches: TeamMatchResultItem[] = [
     isPublic: false,
     completedAt: null,
     resultSource: "console",
+    seasonId: "season-2026",
+    seasonName: "2026",
     homeScore: 0,
     awayScore: 0,
   },
@@ -37,13 +39,15 @@ const matches: TeamMatchResultItem[] = [
     isPublic: true,
     completedAt: "2026-08-20T10:10:00.000Z",
     resultSource: "manual",
+    seasonId: "season-2026",
+    seasonName: "2026",
     homeScore: 28,
     awayScore: 31,
   },
 ];
 
 describe("MatchResultsBoard", () => {
-  it("renders upcoming matches, completed scores and admin actions", async () => {
+  it("renders upcoming matches, completed scores, seasons and admin actions", async () => {
     const loaded = await import("./match-results-board").catch(() => null);
     expect(loaded?.MatchResultsBoard).toBeTypeOf("function");
     if (!loaded?.MatchResultsBoard) return;
@@ -59,6 +63,7 @@ describe("MatchResultsBoard", () => {
     expect(text).toContain("31");
     expect(text).toContain("28");
     expect(text).toContain("WIN");
+    expect(text).toContain("2026 SEASON");
     expect(text).toContain("過去の結果を登録");
     expect(html).toContain('/app/teams/team-1/matches/new');
     expect(html).toContain('/app/teams/team-1/matches/history/new');
