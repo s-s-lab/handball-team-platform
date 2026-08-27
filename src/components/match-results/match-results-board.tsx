@@ -50,6 +50,7 @@ function UpcomingMatchRow({ match }: { match: TeamMatchResultItem }) {
           ) : (
             <span>UPCOMING</span>
           )}
+          {match.seasonName ? <span>{match.seasonName} SEASON</span> : null}
           {match.competitionName ? <span>{match.competitionName}</span> : null}
         </div>
         <p className="mt-2 truncate text-xl font-black tracking-tight">vs {match.opponentName}</p>
@@ -82,6 +83,7 @@ function ResultMatchRow({ match }: { match: TeamMatchResultItem }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-xs font-black tracking-[0.12em] text-muted-foreground">
           <span className={outcomeClassName(match)}>{outcomeLabel(match)}</span>
+          {match.seasonName ? <span>{match.seasonName} SEASON</span> : null}
           {match.competitionName ? <span>{match.competitionName}</span> : null}
           <span>{match.resultSource === "manual" ? "MANUAL" : "MATCH CONSOLE"}</span>
         </div>
