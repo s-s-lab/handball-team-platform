@@ -6,6 +6,22 @@ import type { HandballPosition, MembershipRole, TeamMemberRecord } from "@/featu
 import type { MatchStatus } from "@/features/matches/types";
 import { buildMemberAppearances, type MemberAppearance } from "./profile-runtime";
 
+export type MemberSeasonStats = {
+  seasonId: string;
+  seasonName: string;
+  isCurrent: boolean;
+  appearances: number;
+  starts: number;
+  goals: number;
+  sevenMeterGoals: number;
+  sevenMeterAttempts: number;
+  warnings: number;
+  twoMinuteSuspensions: number;
+  disqualifications: number;
+  saves: number;
+  shotsFaced: number;
+};
+
 export type MemberProfileData = {
   team: {
     id: string;
@@ -15,6 +31,7 @@ export type MemberProfileData = {
   member: TeamMemberRecord;
   role: MembershipRole;
   appearances: MemberAppearance[];
+  seasonStats: MemberSeasonStats[];
 };
 
 function databaseReadFailure() {
@@ -32,39 +49,51 @@ export async function getMemberProfileForCurrentUser(
   if (!member) return null;
 
   const supabase = await createClient();
-  const { data: rosterRows, error: rosterError } = await supabase
-    .from("match_rosters")
-    .select("match_id, shirt_number_snapshot, primary_position_snapshot")
-    .eq("team_member_id", memberId);
+  const [rosterResult, statsResult] = await Promise.all([
+    supabase
+      .from("match_rosters")
+      .select("match_id, shirt_number_snapshot, primary_position_snapshot")
+      .eq("team_member_id", memberId),
+    supabase
+      .from("season_player_stats")
+      .select("season_id, appearances, starts, goals, seven_meter_goals, seven_meter_attempts, warnings, two_minute_suspensions, disqualifications, saves, shots_faced")
+      .eq("team_member_id", memberId),
+  ]);
 
-  if (rosterError) throw databaseReadFailure();
+  if (rosterResult.error || statsResult.error) throw databaseReadFailure();
 
-  const matchIds = [...new Set((rosterRows ?? []).map((row) => row.match_id))];
-  if (matchIds.length === 0) {
-    return {
-      team: { id: team.id, name: team.name, slug: team.slug },
-      member,
-      role: team.role,
-      appearances: [],
-    };
-  }
+  const rosterRows = rosterResult.data ?? [];
+  const statRows = statsResult.data ?? [];
+  const matchIds = [...new Set(rosterRows.map((row) => row.match_id))];
+  const seasonIds = [...new Set(statRows.map((row) => row.season_id))];
 
-  const { data: matches, error: matchError } = await supabase
-    .from("matches")
-    .select("id, name, opponent_name, scheduled_at, venue, status")
-    .eq("team_id", teamId)
-    .in("id", matchIds);
+  const [matchesResult, seasonsResult] = await Promise.all([
+    matchIds.length > 0
+      ? supabase
+          .from("matches")
+          .select("id, name, opponent_name, scheduled_at, venue, status")
+          .eq("team_id", teamId)
+          .in("id", matchIds)
+      : Promise.resolve({ data: [], error: null }),
+    seasonIds.length > 0
+      ? supabase
+          .from("seasons")
+          .select("id, name, is_current")
+          .eq("team_id", teamId)
+          .in("id", seasonIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
-  if (matchError) throw databaseReadFailure();
+  if (matchesResult.error || seasonsResult.error) throw databaseReadFailure();
 
   const appearances = buildMemberAppearances({
     member,
-    rosterRows: (rosterRows ?? []).map((row) => ({
+    rosterRows: rosterRows.map((row) => ({
       matchId: row.match_id,
       shirtNumberSnapshot: row.shirt_number_snapshot,
       primaryPositionSnapshot: row.primary_position_snapshot as HandballPosition | null,
     })),
-    matches: (matches ?? []).map((match) => ({
+    matches: (matchesResult.data ?? []).map((match) => ({
       id: match.id,
       name: match.name,
       opponentName: match.opponent_name,
@@ -74,10 +103,44 @@ export async function getMemberProfileForCurrentUser(
     })),
   }).slice(0, 8);
 
+  const seasonById = new Map(
+    (seasonsResult.data ?? []).map((season) => [
+      season.id,
+      { name: season.name, isCurrent: season.is_current },
+    ]),
+  );
+
+  const seasonStats: MemberSeasonStats[] = statRows
+    .map((row) => {
+      const season = seasonById.get(row.season_id);
+      if (!season) return null;
+      return {
+        seasonId: row.season_id,
+        seasonName: season.name,
+        isCurrent: season.isCurrent,
+        appearances: row.appearances,
+        starts: row.starts,
+        goals: row.goals,
+        sevenMeterGoals: row.seven_meter_goals,
+        sevenMeterAttempts: row.seven_meter_attempts,
+        warnings: row.warnings,
+        twoMinuteSuspensions: row.two_minute_suspensions,
+        disqualifications: row.disqualifications,
+        saves: row.saves,
+        shotsFaced: row.shots_faced,
+      } satisfies MemberSeasonStats;
+    })
+    .filter((row): row is MemberSeasonStats => row !== null)
+    .sort((left, right) => {
+      if (left.isCurrent !== right.isCurrent) return left.isCurrent ? -1 : 1;
+      return right.seasonName.localeCompare(left.seasonName, "ja", { numeric: true });
+    });
+
   return {
     team: { id: team.id, name: team.name, slug: team.slug },
     member,
     role: team.role,
     appearances,
+    seasonStats,
   };
 }
