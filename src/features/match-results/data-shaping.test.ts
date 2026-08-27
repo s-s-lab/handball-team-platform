@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("match result data shaping", () => {
-  it("joins match metadata with score state and defaults missing state to zero", async () => {
+  it("joins match metadata with score and season state and defaults missing values", async () => {
     const loaded = await import("./data-shaping").catch(() => null);
     expect(loaded?.mapTeamMatchResultRows).toBeTypeOf("function");
     if (!loaded?.mapTeamMatchResultRows) return;
@@ -21,6 +21,7 @@ describe("match result data shaping", () => {
           is_public: true,
           completed_at: "2026-08-20T10:10:00.000Z",
           result_source: "manual",
+          season_id: "season-2026",
         },
         {
           id: "match-2",
@@ -35,9 +36,11 @@ describe("match result data shaping", () => {
           is_public: false,
           completed_at: null,
           result_source: "console",
+          season_id: null,
         },
       ],
       [{ match_id: "match-1", home_score: 31, away_score: 28 }],
+      [{ id: "season-2026", name: "2026" }],
     );
 
     expect(result[0]).toEqual({
@@ -53,9 +56,13 @@ describe("match result data shaping", () => {
       isPublic: true,
       completedAt: "2026-08-20T10:10:00.000Z",
       resultSource: "manual",
+      seasonId: "season-2026",
+      seasonName: "2026",
       homeScore: 31,
       awayScore: 28,
     });
+    expect(result[1]?.seasonId).toBeNull();
+    expect(result[1]?.seasonName).toBeNull();
     expect(result[1]?.homeScore).toBe(0);
     expect(result[1]?.awayScore).toBe(0);
   });
