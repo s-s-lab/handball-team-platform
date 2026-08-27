@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin, Pencil, ShieldCheck, ShieldOff, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MemberProfileData } from "@/features/member-directory/data";
+import { goalsPerAppearance, savePercentage } from "@/features/season-stats/runtime";
 
 function formatJapanDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -21,7 +22,7 @@ function statusLabel(status: string) {
 }
 
 export function MemberProfile({ profile }: { profile: MemberProfileData }) {
-  const { team, member, role, appearances } = profile;
+  const { team, member, role, appearances, seasonStats } = profile;
   const isAdmin = role === "admin";
   const roleLabel = member.kind === "player" ? "PLAYER" : "STAFF";
 
@@ -90,6 +91,65 @@ export function MemberProfile({ profile }: { profile: MemberProfileData }) {
         </div>
       </section>
 
+      <section aria-labelledby="season-stats-heading">
+        <div className="flex items-end justify-between gap-4 border-b border-border/80 pb-4">
+          <div>
+            <p className="text-xs font-black tracking-[0.16em] text-muted-foreground">SEASON STATS</p>
+            <h2 id="season-stats-heading" className="mt-1 text-2xl font-black tracking-[-0.03em]">シーズン成績</h2>
+          </div>
+          {seasonStats.length > 0 ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/app/teams/${team.id}/stats${seasonStats[0] ? `?season=${seasonStats[0].seasonId}` : ""}`}>
+                成績一覧 <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+
+        {seasonStats.length > 0 ? (
+          <div className="divide-y divide-border/80">
+            {seasonStats.map((stats) => {
+              const goalsPerGame = goalsPerAppearance(stats.goals, stats.appearances);
+              const saveRate = savePercentage(stats.saves, stats.shotsFaced);
+              return (
+                <Link
+                  key={stats.seasonId}
+                  href={`/app/teams/${team.id}/stats?season=${stats.seasonId}`}
+                  className="group block py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-black">{stats.seasonName}</h3>
+                        {stats.isCurrent ? <span className="text-[10px] font-black tracking-[0.14em] text-[var(--workspace-accent)]">CURRENT</span> : null}
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-muted-foreground">{stats.appearances}試合出場 · {stats.starts}先発</p>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-7 gap-y-3 sm:grid-cols-4 lg:min-w-[34rem]">
+                      <div><dt className="text-[10px] font-black tracking-[0.12em] text-muted-foreground">GOALS</dt><dd className="mt-1 text-2xl font-black tabular-nums">{stats.goals}</dd></div>
+                      <div><dt className="text-[10px] font-black tracking-[0.12em] text-muted-foreground">GOALS / GAME</dt><dd className="mt-1 text-2xl font-black tabular-nums">{goalsPerGame?.toFixed(2) ?? "–"}</dd></div>
+                      <div><dt className="text-[10px] font-black tracking-[0.12em] text-muted-foreground">7m</dt><dd className="mt-1 text-xl font-black tabular-nums">{stats.sevenMeterGoals}/{stats.sevenMeterAttempts}</dd></div>
+                      <div><dt className="text-[10px] font-black tracking-[0.12em] text-muted-foreground">GK SAVE</dt><dd className="mt-1 text-xl font-black tabular-nums">{saveRate === null ? "–" : `${saveRate.toFixed(1)}%`}</dd></div>
+                    </dl>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold text-muted-foreground">
+                    <span>警告 {stats.warnings}</span>
+                    <span>2分退場 {stats.twoMinuteSuspensions}</span>
+                    <span>DQ {stats.disqualifications}</span>
+                    {stats.shotsFaced > 0 ? <span>セーブ {stats.saves}/{stats.shotsFaced}</span> : null}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-10 text-center">
+            <p className="font-black">シーズン成績はまだ登録されていません。</p>
+            <p className="mt-2 text-sm text-muted-foreground">成績画面で個人成績を登録すると、ここにシーズン別の履歴が表示されます。</p>
+          </div>
+        )}
+      </section>
+
       <section aria-labelledby="recent-appearances-heading">
         <div className="flex items-end justify-between gap-4 border-b border-border/80 pb-4">
           <div>
@@ -129,17 +189,6 @@ export function MemberProfile({ profile }: { profile: MemberProfileData }) {
             <p className="mt-2 text-sm text-muted-foreground">試合でロスターを確定すると、ここに出場履歴として表示されます。</p>
           </div>
         )}
-      </section>
-
-      <section className="border-y border-border/80 py-5">
-        <p className="text-xs font-black tracking-[0.16em] text-muted-foreground">SEASON STATS</p>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-black">シーズン成績</h2>
-            <p className="mt-1 text-sm text-muted-foreground">シーズン別の個人成績は、成績管理機能の実装後にここへ連携します。</p>
-          </div>
-          <span className="text-xs font-bold text-muted-foreground">準備中</span>
-        </div>
       </section>
     </div>
   );
