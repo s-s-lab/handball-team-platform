@@ -32,6 +32,7 @@ export type TeamDashboardSummary = {
   nextMatch: DashboardMatch | null;
   latestResult: DashboardMatch | null;
   record: DashboardRecord;
+  currentSeasonName: string | null;
   activeMemberCount: number;
   topScorers: DashboardScorer[];
 };
@@ -52,6 +53,8 @@ export function buildDashboardSummary(input: {
   now: Date;
   activeMemberCount: number;
   matches: DashboardMatch[];
+  recordMatches?: DashboardMatch[];
+  currentSeasonName?: string | null;
   scorers: DashboardScorer[];
 }): TeamDashboardSummary {
   const nowMs = input.now.getTime();
@@ -67,7 +70,10 @@ export function buildDashboardSummary(input: {
     .filter((match) => match.status === "finished")
     .sort((a, b) => matchTime(b) - matchTime(a));
 
-  const record = finished.reduce<DashboardRecord>(
+  const recordFinished = (input.recordMatches ?? input.matches)
+    .filter((match) => match.status === "finished");
+
+  const record = recordFinished.reduce<DashboardRecord>(
     (acc, match) => {
       const result = classifyTeamResult(match);
       acc.played += 1;
@@ -88,6 +94,7 @@ export function buildDashboardSummary(input: {
     nextMatch,
     latestResult: finished[0] ?? null,
     record,
+    currentSeasonName: input.currentSeasonName ?? null,
     activeMemberCount: Math.max(0, input.activeMemberCount),
     topScorers,
   };
