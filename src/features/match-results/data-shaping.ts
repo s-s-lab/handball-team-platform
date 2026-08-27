@@ -14,6 +14,7 @@ type MatchRow = {
   is_public: boolean;
   completed_at: string | null;
   result_source: string;
+  season_id: string | null;
 };
 
 type StateRow = {
@@ -22,8 +23,18 @@ type StateRow = {
   away_score: number;
 };
 
-export function mapTeamMatchResultRows(matchRows: MatchRow[], stateRows: StateRow[]): TeamMatchResultItem[] {
+type SeasonRow = {
+  id: string;
+  name: string;
+};
+
+export function mapTeamMatchResultRows(
+  matchRows: MatchRow[],
+  stateRows: StateRow[],
+  seasonRows: SeasonRow[] = [],
+): TeamMatchResultItem[] {
   const scoreByMatch = new Map(stateRows.map((state) => [state.match_id, state]));
+  const seasonById = new Map(seasonRows.map((season) => [season.id, season.name]));
 
   return matchRows.map((match) => {
     const score = scoreByMatch.get(match.id);
@@ -40,6 +51,8 @@ export function mapTeamMatchResultRows(matchRows: MatchRow[], stateRows: StateRo
       isPublic: match.is_public,
       completedAt: match.completed_at,
       resultSource: match.result_source as MatchResultSource,
+      seasonId: match.season_id,
+      seasonName: match.season_id ? seasonById.get(match.season_id) ?? null : null,
       homeScore: score?.home_score ?? 0,
       awayScore: score?.away_score ?? 0,
     };
