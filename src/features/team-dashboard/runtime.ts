@@ -32,7 +32,7 @@ export type TeamDashboardSummary = {
   nextMatch: DashboardMatch | null;
   latestResult: DashboardMatch | null;
   record: DashboardRecord;
-  currentSeasonName: string | null;
+  currentSeasonName?: string | null;
   activeMemberCount: number;
   topScorers: DashboardScorer[];
 };
