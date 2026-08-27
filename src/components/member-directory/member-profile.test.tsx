@@ -8,7 +8,7 @@ vi.mock("next/link", () => ({
     React.createElement("a", { href, ...props }, children),
 }));
 
-const profile: MemberProfileData = {
+const profile = {
   team: { id: "team-1", name: "青山ハンドボールクラブ", slug: "agu" },
   role: "admin",
   member: {
@@ -36,10 +36,27 @@ const profile: MemberProfileData = {
       primaryPosition: "CB",
     },
   ],
-};
+  seasonStats: [
+    {
+      seasonId: "season-2026",
+      seasonName: "2026",
+      isCurrent: true,
+      appearances: 8,
+      starts: 7,
+      goals: 42,
+      sevenMeterGoals: 5,
+      sevenMeterAttempts: 6,
+      warnings: 1,
+      twoMinuteSuspensions: 2,
+      disqualifications: 0,
+      saves: 0,
+      shotsFaced: 0,
+    },
+  ],
+} satisfies MemberProfileData;
 
 describe("MemberProfile", () => {
-  it("renders member identity, roster metadata and recent appearances", async () => {
+  it("renders member identity, season stats and recent appearances", async () => {
     const loaded = await import("./member-profile").catch(() => null);
     expect(loaded?.MemberProfile).toBeTypeOf("function");
     if (!loaded?.MemberProfile) return;
@@ -51,6 +68,11 @@ describe("MemberProfile", () => {
     expect(text).toContain("4");
     expect(text).toContain("CB");
     expect(text).toContain("U18");
+    expect(text).toContain("シーズン成績");
+    expect(text).toContain("2026");
+    expect(text).toContain("42");
+    expect(text).toContain("5.25");
+    expect(text).not.toContain("準備中");
     expect(text).toContain("最近の試合");
     expect(text).toContain("東京HC");
     expect(text).toContain("秋季リーグ");
