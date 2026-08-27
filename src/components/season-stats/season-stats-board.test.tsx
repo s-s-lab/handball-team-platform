@@ -7,6 +7,12 @@ vi.mock("next/link", () => ({
     React.createElement("a", { href, ...props }, children),
 }));
 
+vi.mock("@/features/season-stats/actions", () => ({
+  saveSeasonAction: "/mock/save-season",
+  assignMatchSeasonAction: "/mock/assign-match",
+  saveSeasonPlayerStatsAction: "/mock/save-stats",
+}));
+
 const seasons = [
   { id: "season-2026", teamId: "team-1", name: "2026", startDate: "2026-01-01", endDate: "2026-12-31", isCurrent: true },
   { id: "season-2025", teamId: "team-1", name: "2025", startDate: "2025-01-01", endDate: "2025-12-31", isCurrent: false },
@@ -23,7 +29,7 @@ const matches = [
 ];
 
 describe("SeasonStatsBoard", () => {
-  it("renders season record, rankings and admin editing controls", async () => {
+  it("renders season record, rankings and working admin editing controls", async () => {
     const loaded = await import("./season-stats-board").catch(() => null);
     expect(loaded?.SeasonStatsBoard).toBeTypeOf("function");
     if (!loaded?.SeasonStatsBoard) return;
@@ -51,7 +57,11 @@ describe("SeasonStatsBoard", () => {
     expect(text).toContain("選手成績を編集");
     expect(text).toContain("試合をシーズンに紐付け");
     expect(text).toContain("新しいシーズン");
+    expect(html).toContain('name="memberId" value="p1"');
     expect(html).toContain('name="appearances:p1"');
     expect(html).toContain('name="seasonId:m2"');
+    expect(html).toContain('action="/mock/save-season"');
+    expect(html).toContain('action="/mock/save-stats"');
+    expect(html).toContain('action="/mock/assign-match"');
   });
 });
