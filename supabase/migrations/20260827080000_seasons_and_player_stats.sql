@@ -48,7 +48,7 @@ create table public.season_player_stats (
   constraint season_player_stats_unique unique (season_id, team_member_id),
   constraint season_player_stats_starts_le_appearances_check check (starts <= appearances),
   constraint season_player_stats_7m_check check (seven_meter_goals <= seven_meter_attempts),
-  constraint season_player_stats_saves_check check (saves <= shots_faced)
+  constraint season_player_stats_saves_le_shots_faced_check check (saves <= shots_faced)
 );
 
 create index season_player_stats_member_idx
