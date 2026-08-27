@@ -15,6 +15,8 @@ export type TeamMatchResultItem = {
   isPublic: boolean;
   completedAt: string | null;
   resultSource: MatchResultSource;
+  seasonId?: string | null;
+  seasonName?: string | null;
   homeScore: number;
   awayScore: number;
 };
